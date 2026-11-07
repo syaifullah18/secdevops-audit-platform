@@ -1,0 +1,184 @@
+[
+  {
+    "id": "871f6078-2d0b-51dd-aa9a-a44e202a653f",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:authz:orders-idor",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "authz",
+    "cwe": null,
+    "title": "Order lookup does not check ownership",
+    "description": "Order lookup does not check ownership in sample-app.",
+    "rootCause": "Handler loads the record by id without an owner filter.",
+    "location": {
+      "file": "src/orders/service.ts",
+      "line": 42
+    },
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/api/routes.ts",
+        "line": 12,
+        "scope": "GET /orders/:id",
+        "description": "Route reads id from the path."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/api/controller.ts",
+        "line": 30,
+        "scope": "OrderController.get",
+        "description": "Passes id unchanged."
+      },
+      {
+        "kind": "sink",
+        "file": "src/orders/service.ts",
+        "line": 42,
+        "scope": "OrderService.get",
+        "description": "Query uses id only."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/orders/service.ts",
+        "line": 42,
+        "description": "findById(id) has no user scope."
+      }
+    ],
+    "verdict": "confirmed",
+    "originalSeverity": null,
+    "verifiedSeverity": "high",
+    "confidence": "high",
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": "2026-12-01T00:00:00.000Z",
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": [],
+    "rejectionReason": null,
+    "remediation": {
+      "strategy": "Filter by the caller's user id.",
+      "codeChanges": [
+        {
+          "file": "src/orders/service.ts",
+          "fixedCode": "findOne({ id, ownerId })"
+        }
+      ]
+    },
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "15ee6076-ac6b-5ab4-91b1-1a712edac7a3",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:authn:xff-allowlist",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "authn",
+    "cwe": null,
+    "title": "IP allowlist trusts X-Forwarded-For",
+    "description": "IP allowlist trusts X-Forwarded-For in sample-app.",
+    "rootCause": "Header value is trusted without a proxy allowlist.",
+    "location": {
+      "file": "src/middleware/ip.ts",
+      "line": 18
+    },
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware/ip.ts",
+        "line": 5,
+        "scope": "ipAllowlist",
+        "description": "Reads X-Forwarded-For."
+      },
+      {
+        "kind": "sink",
+        "file": "src/middleware/ip.ts",
+        "line": 18,
+        "scope": "isAllowed",
+        "description": "Compares the header to the allowlist."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/middleware/ip.ts",
+        "line": 18,
+        "description": "Header used as the client address."
+      }
+    ],
+    "verdict": "needs_validation",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": ["Deployment topology of the reverse proxy is unknown."],
+    "rejectionReason": null,
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "472e438c-0f86-5d8d-a3c6-a30e6ef563f7",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:injection:static-query",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "other",
+    "cwe": null,
+    "title": "Query built by concatenation",
+    "description": "Query built by concatenation in sample-app.",
+    "rootCause": "String concatenation builds a query.",
+    "location": {
+      "file": "src/db/queries.ts",
+      "line": 7
+    },
+    "trace": [
+      {
+        "kind": "sink",
+        "file": "src/db/queries.ts",
+        "line": 7,
+        "scope": "buildQuery",
+        "description": "Concatenates a constant."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/db/queries.ts",
+        "line": 7,
+        "description": "Only constants are concatenated."
+      }
+    ],
+    "verdict": "rejected",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": [],
+    "rejectionReason": "The concatenated value is a compile-time constant, not user input.",
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  }
+]

@@ -1,0 +1,293 @@
+[
+  {
+    "id": "058c45fa-dc48-5688-81a6-e6de6ae962d5",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:authz:admin-export",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "authz",
+    "cwe": null,
+    "title": "Export endpoint lacks role check",
+    "description": "Export endpoint lacks role check in sample-app.",
+    "rootCause": "Handler loads the record by id without an owner filter.",
+    "location": {
+      "file": "src/admin/export.ts",
+      "line": 21
+    },
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/api/routes.ts",
+        "line": 12,
+        "scope": "GET /orders/:id",
+        "description": "Route reads id from the path."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/api/controller.ts",
+        "line": 30,
+        "scope": "OrderController.get",
+        "description": "Passes id unchanged."
+      },
+      {
+        "kind": "sink",
+        "file": "src/admin/export.ts",
+        "line": 21,
+        "scope": "exportAll",
+        "description": "Query uses id only."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/admin/export.ts",
+        "line": 21,
+        "description": "findById(id) has no user scope."
+      }
+    ],
+    "verdict": "confirmed",
+    "originalSeverity": null,
+    "verifiedSeverity": "critical",
+    "confidence": "medium",
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": "2026-11-08T00:00:00.000Z",
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": [],
+    "rejectionReason": null,
+    "remediation": {
+      "strategy": "Filter by the caller's user id.",
+      "codeChanges": [
+        {
+          "file": "src/admin/export.ts",
+          "fixedCode": "findOne({ id, ownerId })"
+        }
+      ]
+    },
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "6993fd48-7521-52a9-b510-1772fe15b36c",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:config:debug-mode",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "config",
+    "cwe": null,
+    "title": "Debug mode enabled by default",
+    "description": "Debug mode enabled by default in sample-app.",
+    "rootCause": "Header value is trusted without a proxy allowlist.",
+    "location": {
+      "file": "src/config/defaults.ts",
+      "line": 9
+    },
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware/ip.ts",
+        "line": 5,
+        "scope": "ipAllowlist",
+        "description": "Reads X-Forwarded-For."
+      },
+      {
+        "kind": "sink",
+        "file": "src/config/defaults.ts",
+        "line": 9,
+        "scope": "isAllowed",
+        "description": "Compares the header to the allowlist."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/config/defaults.ts",
+        "line": 9,
+        "description": "Header used as the client address."
+      }
+    ],
+    "verdict": "needs_validation",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": ["Deployment topology of the reverse proxy is unknown."],
+    "rejectionReason": null,
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "5d8659f1-f929-597e-95bf-2d2710a04ead",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:crypto:weak-token",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "crypto",
+    "cwe": null,
+    "title": "Reset token uses a short random value",
+    "description": "Reset token uses a short random value in sample-app.",
+    "rootCause": "Header value is trusted without a proxy allowlist.",
+    "location": {
+      "file": "src/auth/reset.ts",
+      "line": 33
+    },
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware/ip.ts",
+        "line": 5,
+        "scope": "ipAllowlist",
+        "description": "Reads X-Forwarded-For."
+      },
+      {
+        "kind": "sink",
+        "file": "src/auth/reset.ts",
+        "line": 33,
+        "scope": "isAllowed",
+        "description": "Compares the header to the allowlist."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/auth/reset.ts",
+        "line": 33,
+        "description": "Header used as the client address."
+      }
+    ],
+    "verdict": "needs_validation",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": ["Deployment topology of the reverse proxy is unknown."],
+    "rejectionReason": null,
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "ed6448a8-dfd2-591c-9396-2e48a897233a",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:injection:log-format",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "other",
+    "cwe": null,
+    "title": "Log format string injection",
+    "description": "Log format string injection in sample-app.",
+    "rootCause": "String concatenation builds a query.",
+    "location": {
+      "file": "src/log/format.ts",
+      "line": 14
+    },
+    "trace": [
+      {
+        "kind": "sink",
+        "file": "src/log/format.ts",
+        "line": 14,
+        "scope": "buildQuery",
+        "description": "Concatenates a constant."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/log/format.ts",
+        "line": 14,
+        "description": "Only constants are concatenated."
+      }
+    ],
+    "verdict": "rejected",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": [],
+    "rejectionReason": "The concatenated value is a compile-time constant, not user input.",
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  },
+  {
+    "id": "36011c6c-3aae-5e9f-ac24-e697ad896b14",
+    "projectId": "00000000-0000-4000-8000-0000000000aa",
+    "fingerprint": "sample-app:client:inner-html",
+    "sourceRun": "00000000-0000-4000-8000-0000000000b1",
+    "firstRun": "00000000-0000-4000-8000-0000000000b1",
+    "attackClass": "other",
+    "cwe": null,
+    "title": "innerHTML with static markup",
+    "description": "innerHTML with static markup in sample-app.",
+    "rootCause": "String concatenation builds a query.",
+    "location": {
+      "file": "web/src/banner.ts",
+      "line": 3
+    },
+    "trace": [
+      {
+        "kind": "sink",
+        "file": "web/src/banner.ts",
+        "line": 3,
+        "scope": "buildQuery",
+        "description": "Concatenates a constant."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "web/src/banner.ts",
+        "line": 3,
+        "description": "Only constants are concatenated."
+      }
+    ],
+    "verdict": "rejected",
+    "originalSeverity": null,
+    "verifiedSeverity": null,
+    "confidence": null,
+    "status": "new",
+    "owner": null,
+    "firstSeen": "2026-11-01T00:00:00.000Z",
+    "lastSeen": "2026-11-01T00:00:00.000Z",
+    "slaDue": null,
+    "model": {
+      "adapter": "mock",
+      "model": "mock-1"
+    },
+    "phase": "record_verify",
+    "blockers": [],
+    "rejectionReason": "The concatenated value is a compile-time constant, not user input.",
+    "remediation": null,
+    "triageSuggestion": null,
+    "rootCauseGroup": null
+  }
+]

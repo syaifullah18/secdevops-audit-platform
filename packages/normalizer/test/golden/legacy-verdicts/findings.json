@@ -1,0 +1,192 @@
+[
+  {
+    "verdict": "VALID",
+    "fingerprint": "sample-app:authz:admin-export",
+    "title": "Export endpoint lacks role check",
+    "description": "Export endpoint lacks role check in sample-app.",
+    "root_cause": "Handler loads the record by id without an owner filter.",
+    "intended_behavior": "Only the owner can read the record.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/api/routes.ts",
+        "line": 12,
+        "scope": "GET /orders/:id",
+        "description": "Route reads id from the path."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/api/controller.ts",
+        "line": 30,
+        "scope": "OrderController.get",
+        "description": "Passes id unchanged."
+      },
+      {
+        "kind": "sink",
+        "file": "src/admin/export.ts",
+        "line": 21,
+        "scope": "exportAll",
+        "description": "Query uses id only."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/admin/export.ts",
+        "line": 21,
+        "description": "findById(id) has no user scope."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "Any authenticated user."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "A signed-in user of sample-app.",
+      "payloads": ["GET /orders/1002"],
+      "instructions": ["Sign in as user A.", "Request an order owned by user B."],
+      "observed_result": "The order of user B is returned."
+    },
+    "remediation": {
+      "strategy": "Filter by the caller's user id.",
+      "code_changes": [
+        {
+          "file_name": "src/admin/export.ts",
+          "fixed_code": "findOne({ id, ownerId })"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "Reachable by any signed-in user of sample-app."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Exposes other users' orders in sample-app."
+      },
+      "overall_severity": "critical"
+    },
+    "confidence": {
+      "score": "medium",
+      "reason": "Reproduced against the sample-app fixture."
+    }
+  },
+  {
+    "verdict": "Plausible",
+    "fingerprint": "sample-app:config:debug-mode",
+    "title": "Debug mode enabled by default",
+    "description": "Debug mode enabled by default in sample-app.",
+    "claimed_root_cause": "Header value is trusted without a proxy allowlist.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware/ip.ts",
+        "line": 5,
+        "scope": "ipAllowlist",
+        "description": "Reads X-Forwarded-For."
+      },
+      {
+        "kind": "sink",
+        "file": "src/config/defaults.ts",
+        "line": 9,
+        "scope": "isAllowed",
+        "description": "Compares the header to the allowlist."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/config/defaults.ts",
+        "line": 9,
+        "description": "Header used as the client address."
+      }
+    ],
+    "blockers": ["Deployment topology of the reverse proxy is unknown."],
+    "validation_plan": {
+      "deployment": "Check whether the edge proxy overwrites X-Forwarded-For."
+    }
+  },
+  {
+    "verdict": "needs-validation",
+    "fingerprint": "sample-app:crypto:weak-token",
+    "title": "Reset token uses a short random value",
+    "description": "Reset token uses a short random value in sample-app.",
+    "claimed_root_cause": "Header value is trusted without a proxy allowlist.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware/ip.ts",
+        "line": 5,
+        "scope": "ipAllowlist",
+        "description": "Reads X-Forwarded-For."
+      },
+      {
+        "kind": "sink",
+        "file": "src/auth/reset.ts",
+        "line": 33,
+        "scope": "isAllowed",
+        "description": "Compares the header to the allowlist."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/auth/reset.ts",
+        "line": 33,
+        "description": "Header used as the client address."
+      }
+    ],
+    "blockers": ["Deployment topology of the reverse proxy is unknown."],
+    "validation_plan": {
+      "deployment": "Check whether the edge proxy overwrites X-Forwarded-For."
+    }
+  },
+  {
+    "verdict": "false positive",
+    "fingerprint": "sample-app:injection:log-format",
+    "title": "Log format string injection",
+    "description": "Log format string injection in sample-app.",
+    "claimed_root_cause": "String concatenation builds a query.",
+    "trace": [
+      {
+        "kind": "sink",
+        "file": "src/log/format.ts",
+        "line": 14,
+        "scope": "buildQuery",
+        "description": "Concatenates a constant."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/log/format.ts",
+        "line": 14,
+        "description": "Only constants are concatenated."
+      }
+    ],
+    "reason": "The concatenated value is a compile-time constant, not user input."
+  },
+  {
+    "verdict": "REFUTED",
+    "fingerprint": "sample-app:client:inner-html",
+    "title": "innerHTML with static markup",
+    "description": "innerHTML with static markup in sample-app.",
+    "claimed_root_cause": "String concatenation builds a query.",
+    "trace": [
+      {
+        "kind": "sink",
+        "file": "web/src/banner.ts",
+        "line": 3,
+        "scope": "buildQuery",
+        "description": "Concatenates a constant."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "web/src/banner.ts",
+        "line": 3,
+        "description": "Only constants are concatenated."
+      }
+    ],
+    "reason": "The concatenated value is a compile-time constant, not user input."
+  }
+]

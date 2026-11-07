@@ -1,0 +1,84 @@
+[provider filter] Some content was removed by the safety filter.
+```json
+{
+  "verdict": "confirmed",
+  "fingerprint": "sample-app:authz:orders-idor",
+  "title": "Order lookup does not check ownership",
+  "description": "Order lookup does not check ownership in sample-app.",
+  "root_cause": "Handler loads the record by id without an owner filter.",
+  "intended_behavior": "Only the owner can read the record.",
+  "trace": [
+    {
+      "kind": "entrypoint",
+      "file": "src/api/routes.ts",
+      "line": 12,
+      "scope": "GET /orders/:id",
+      "description": "Route reads id from the path."
+    },
+    {
+      "kind": "propagation",
+      "file": "src/api/controller.ts",
+      "line": 30,
+      "scope": "OrderController.get",
+      "description": "Passes id unchanged."
+    },
+    {
+      "kind": "sink",
+      "file": "src/orders/service.ts",
+      "line": 42,
+      "scope": "OrderService.get",
+      "description": "Query uses id only."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "src/orders/service.ts",
+      "line": 42,
+      "description": "findById(id) has no user scope."
+    }
+  ],
+  "conditions": [
+    {
+      "kind": "authentication_level",
+      "description": "Any authenticated user."
+    }
+  ],
+  "execution": {
+    "attacker_perspective": "A signed-in user of sample-app.",
+    "payloads": [
+      "GET /orders/1002"
+    ],
+    "instructions": [
+      "Sign in as user A.",
+      "Request an order owned by user B."
+    ],
+    "observed_result": "The order of user B is returned."
+  },
+  "remediation": {
+    "strategy": "Filter by the caller's user id.",
+    "code_changes": [
+      {
+        "file_name": "src/orders/service.ts",
+        "fixed_code": "findOne({ id, ownerId })"
+      }
+    ]
+  },
+  "severity": {
+    "likelihood": {
+      "score": "high",
+      "reason": "Reachable by any signed-in user of sample-app."
+    },
+    "impact": {
+      "score": "high",
+      "reason": "Exposes other users' orders in sample-app."
+    },
+    "overall_severity": "high"
+  },
+  "confidence": {
+    "score": "high",
+    "reason": "Reproduced against the sample-app fixture."
+  }
+}
+{"verdict":"needs_validation","fingerprint":"sample-app:authn:xff-allowlist","title":"IP allowlist trusts X-Forwarded-For","description":"IP allowlist trusts X-Forwarded-For in sample-app.","claimed_root_cause":"Header value is trusted without a proxy allowlist.","trace":[{"kind":"entrypoint","file":"src/middleware/ip.ts","line":5,"scope":"ipAllowlist","description":"Reads X-Forwarded-For."},{"kind":"sink","file":"src/middleware/ip.ts","line":18,"scope":"isAllowed","description":"Compares the header to the allowlist."}],"evidence":[{"file":"src/middleware/ip.ts","line":18,"description":"Header used as the client address."}],"blockers":["Deployment topology of the reverse proxy is unknown."],"validation_plan":{"deployment":"Check whether the edge proxy overwrites X-Forwarded-For."}}
+```
+[Content filtered: {policy}] end of response

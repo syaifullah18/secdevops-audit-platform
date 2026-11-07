@@ -1,0 +1,34 @@
+apiVersion: 1
+
+# Variables in ${...} come from the Grafana container environment (docker-compose.yml).
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  # Read-only role created by deploy/postgres/10-init.sh (SELECT only, read-only transactions).
+  - name: SDAP PostgreSQL
+    uid: postgres
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: sdap_grafana_ro
+    editable: false
+    jsonData:
+      database: ${POSTGRES_DB}
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false
+    secureJsonData:
+      password: ${GRAFANA_PG_PASSWORD}
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false

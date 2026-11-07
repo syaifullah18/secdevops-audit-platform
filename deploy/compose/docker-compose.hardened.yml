@@ -1,5 +1,6 @@
 # Hardening override for shared hosts: read-only root filesystems, no capabilities, no privilege
 # escalation, resource limits. OIDC must be configured (dev tokens are refused in production).
+# Operator-supplied passwords are required (evaluation defaults are rejected).
 #   docker compose -f docker-compose.yml -f deploy/compose/docker-compose.hardened.yml up -d
 x-app-hardening: &app-hardening
   read_only: true
@@ -10,11 +11,22 @@ x-app-hardening: &app-hardening
     - /tmp
 
 services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be explicitly set and non-empty in production}
+      GRAFANA_PG_PASSWORD: ${GRAFANA_PG_PASSWORD:?GRAFANA_PG_PASSWORD must be explicitly set and non-empty in production}
+
+  grafana:
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be explicitly set and non-empty in production}
+      GRAFANA_PG_PASSWORD: ${GRAFANA_PG_PASSWORD:?GRAFANA_PG_PASSWORD must be explicitly set and non-empty in production}
+
   api:
     <<: *app-hardening
     environment:
       NODE_ENV: production
       AUTH_DEV_MODE: "false"
+      DATABASE_URL: postgres://${POSTGRES_USER:-sdap}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be explicitly set and non-empty in production}@postgres:5432/${POSTGRES_DB:-sdap}
     deploy:
       resources:
         limits: { cpus: "1.0", memory: 512M }
@@ -22,6 +34,7 @@ services:
     <<: *app-hardening
     environment:
       NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-sdap}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be explicitly set and non-empty in production}@postgres:5432/${POSTGRES_DB:-sdap}
     deploy:
       resources:
         limits: { cpus: "2.0", memory: 2G }

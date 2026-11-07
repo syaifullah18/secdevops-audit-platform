@@ -340,6 +340,52 @@ export class DockerSandboxRunner implements SandboxRunner {
     return argv;
   }
 
+  private async removeContainer(name: string, retries = 3): Promise<void> {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        await this.docker(["rm", "-f", name], 15_000);
+        return;
+      } catch {
+        if (attempt < retries - 1) {
+          await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        }
+      }
+    }
+  }
+
+  private async removeNetwork(network: string, retries = 5): Promise<void> {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        await this.docker(["network", "rm", network], 15_000);
+        return;
+      } catch {
+        try {
+          const inspectOut = await this.docker(
+            [
+              "network",
+              "inspect",
+              "--format",
+              "{{range $k, $v := .Containers}}{{$k}} {{end}}",
+              network,
+            ],
+            5_000,
+          );
+          const lingering = inspectOut.trim().split(/\s+/).filter(Boolean);
+          for (const c of lingering) {
+            await this.docker(["network", "disconnect", "-f", network, c], 5_000).catch(
+              () => undefined,
+            );
+          }
+        } catch {
+          // Ignore inspect error
+        }
+        if (attempt < retries - 1) {
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        }
+      }
+    }
+  }
+
   async exec(req: SandboxExecRequest): Promise<SandboxExecResult> {
     const policy = validateSandboxExecRequest(req);
     const startTime = Date.now();
@@ -369,7 +415,7 @@ export class DockerSandboxRunner implements SandboxRunner {
     try {
       let egress: EgressAttachment | undefined;
       if (policy.egressAllowlist.length > 0) {
-        egress = await this.startEgressSidecar(id, policy.egressAllowlist, cleanups);
+        egress = await this.startEgressSidecar(id, policy.egressAllowlist, cleanups, req.signal);
       }
       if (req.signal?.aborted) {
         return {
@@ -382,9 +428,20 @@ export class DockerSandboxRunner implements SandboxRunner {
       }
       const argv = this.buildDockerArgv(req, policy, mounts, containerName, egress);
       return await this.runContainer(argv, containerName, policy, req, startTime);
+    } catch (err) {
+      if (req.signal?.aborted) {
+        return {
+          exitCode: null,
+          killedBy: "abort",
+          stdout: "",
+          stderr: "",
+          durationMs: Date.now() - startTime,
+        };
+      }
+      throw err;
     } finally {
-      await this.docker(["rm", "-f", containerName], 15_000).catch(() => undefined);
-      for (const cleanup of cleanups.reverse()) {
+      await this.removeContainer(containerName);
+      for (const cleanup of cleanups.slice().reverse()) {
         await cleanup().catch(() => undefined);
       }
     }
@@ -398,6 +455,7 @@ export class DockerSandboxRunner implements SandboxRunner {
     id: string,
     allowlist: readonly string[],
     cleanups: (() => Promise<unknown>)[],
+    signal?: AbortSignal,
   ): Promise<EgressAttachment> {
     if (!(await this.imagePresent(this.egressProxyImage))) {
       throw new SandboxExecutionError(
@@ -409,7 +467,7 @@ export class DockerSandboxRunner implements SandboxRunner {
     const proxyName = `sdap-egress-${id}`;
 
     await this.docker(["network", "create", "--internal", "--label", LABEL, network]);
-    cleanups.push(() => this.docker(["network", "rm", network], 15_000));
+    cleanups.push(() => this.removeNetwork(network));
 
     await this.docker([
       "create",
@@ -444,7 +502,7 @@ export class DockerSandboxRunner implements SandboxRunner {
       "HOST=0.0.0.0",
       this.egressProxyImage,
     ]);
-    cleanups.push(() => this.docker(["rm", "-f", proxyName], 15_000));
+    cleanups.push(() => this.removeContainer(proxyName));
 
     // Start on the default network first and wait until it is listening: the sidecar
     // snapshots its resolvers at startup, and attaching the internal network rewrites
@@ -452,6 +510,9 @@ export class DockerSandboxRunner implements SandboxRunner {
     await this.docker(["start", proxyName]);
     const deadline = Date.now() + 15_000;
     for (;;) {
+      if (signal?.aborted) {
+        throw new SandboxExecutionError("execution aborted while waiting for egress proxy");
+      }
       const logs = await this.docker(["logs", proxyName]).catch(() => "");
       if (logs.includes("Listening on")) break;
       const state = (
@@ -500,7 +561,6 @@ export class DockerSandboxRunner implements SandboxRunner {
       const kill = (reason: "timeout" | "abort") => {
         if (settled) return;
         killedBy ??= reason;
-        execFile(this.dockerPath, ["kill", containerName], { env: this.dockerEnv }, () => {});
         child.kill("SIGKILL");
       };
       const timer = setTimeout(() => kill("timeout"), policy.timeoutSec * 1000);

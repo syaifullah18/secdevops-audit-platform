@@ -14,7 +14,6 @@ import { createPgStore } from "../src/db/index.js";
 const DATABASE_URL = process.env["DATABASE_URL"];
 
 if (!DATABASE_URL) {
-  // eslint-disable-next-line no-console
   console.info("DATABASE_URL not set; skipping PostgreSQL store tests.");
 }
 

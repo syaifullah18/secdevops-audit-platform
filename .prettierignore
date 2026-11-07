@@ -1,0 +1,8 @@
+vendor/
+fixtures/
+dist/
+coverage/
+pnpm-lock.yaml
+**/drizzle/
+CHANGELOG.md
+docs/PRD.md

@@ -1,0 +1,35 @@
+{
+  "name": "@sdap/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared contracts (Zod schemas, types, events) for the SecDevOps Audit Platform.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema/*": "./schema/*",
+    "./testing": {
+      "source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "schema": "tsx scripts/export-json-schema.ts"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  }
+}

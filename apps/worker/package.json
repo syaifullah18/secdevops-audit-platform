@@ -1,0 +1,30 @@
+{
+  "name": "@sdap/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BullMQ audit worker: runs the security-audit-skill phases with model fallback.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sdap/core": "workspace:*",
+    "@sdap/adapters": "workspace:*",
+    "@sdap/normalizer": "workspace:*",
+    "@sdap/sandbox": "workspace:*"
+  }
+}

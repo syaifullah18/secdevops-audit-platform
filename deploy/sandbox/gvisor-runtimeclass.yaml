@@ -1,0 +1,12 @@
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc
+scheduling:
+  nodeSelector:
+    sandbox.gvisor.io/enabled: "true"
+  tolerations:
+    - key: "sandbox.gvisor.io/enabled"
+      operator: "Exists"
+      effect: "NoSchedule"

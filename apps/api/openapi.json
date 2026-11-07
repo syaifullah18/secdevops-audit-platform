@@ -1,0 +1,4639 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SecDevOps Audit Platform API",
+    "version": "0.1.0",
+    "description": "Fastify API for audit orchestration, findings management, policy enforcement, and webhooks."
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Liveness probe",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readiness probe",
+        "responses": {
+          "200": {
+            "description": "Service is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification document",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchProjectRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "summary": "List projects in caller scope",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new project",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}": {
+      "get": {
+        "summary": "Get a project by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update project settings",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/runs": {
+      "get": {
+        "summary": "List runs for a project",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/gate": {
+      "get": {
+        "summary": "Evaluate release gate for a project",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gate evaluation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/runs": {
+      "post": {
+        "summary": "Trigger an audit run",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Run created and queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{id}": {
+      "get": {
+        "summary": "Get run details",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{id}/cancel": {
+      "post": {
+        "summary": "Cancel an active or queued run",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Run already terminal"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{id}/events": {
+      "get": {
+        "summary": "List platform events for a run",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "afterSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of platform events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlatformEvent"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{id}/events/stream": {
+      "get": {
+        "summary": "SSE real-time stream of run platform events",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/findings": {
+      "get": {
+        "summary": "Query findings in scope",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "verdict",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "minSeverity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attackClass",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "includeRejected",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/findings/{id}": {
+      "get": {
+        "summary": "Get finding details",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Finding details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/findings/{id}/history": {
+      "get": {
+        "summary": "Get triage audit history for finding",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of triage events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TriageEvent"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/findings/{id}/triage": {
+      "post": {
+        "summary": "Triage a finding",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated finding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/review-queue": {
+      "get": {
+        "summary": "Review queue for open needs_validation findings",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review queue page of findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/policies/{id}": {
+      "get": {
+        "summary": "Get policy by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policy"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "summary": "Create or update policy",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policy"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{provider}": {
+      "post": {
+        "summary": "Ingest CI webhook event",
+        "description": "Authenticated by signature instead of a bearer token: GitHub `X-Hub-Signature-256` and Bitbucket `X-Hub-Signature` carry `sha256=<HMAC-SHA256 of the body>`; GitLab sends the secret in `X-GitLab-Token`. Push, pull/merge request and tag events start a focused run; other events return 202 with status `ignored`.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["github", "gitlab", "bitbucket"]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Webhook accepted and run queued"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {}
+        },
+        "required": ["error", "message"],
+        "additionalProperties": false
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "repoUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "defaultBranch": {
+            "default": "main",
+            "type": "string",
+            "minLength": 1
+          },
+          "team": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "policyId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelRouting": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                },
+                "primary": {
+                  "type": "object",
+                  "properties": {
+                    "adapter": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["adapter", "model"],
+                  "additionalProperties": false
+                },
+                "fallbacks": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["adapter", "model"],
+                    "additionalProperties": false
+                  }
+                },
+                "requireDifferentFamilyFrom": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                }
+              },
+              "required": ["task", "primary", "fallbacks"],
+              "additionalProperties": false
+            }
+          },
+          "escalation": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "thresholds": {
+                    "default": {},
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "defaultThreshold": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "uncertaintyBand": {
+                    "default": 0.1,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5
+                  }
+                },
+                "required": ["thresholds", "defaultThreshold", "uncertaintyBand"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "criticalPaths": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monthlyTokenBudget": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "repoUrl",
+          "defaultBranch",
+          "team",
+          "clientId",
+          "policyId",
+          "modelRouting",
+          "escalation",
+          "criticalPaths",
+          "monthlyTokenBudget",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Run": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["focused", "incremental", "full"]
+          },
+          "repeat": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["manual", "api", "ci", "schedule", "release_tag", "webhook"]
+              },
+              "actor": {
+                "type": ["string", "null"]
+              },
+              "ref": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["kind", "actor", "ref"],
+            "additionalProperties": false
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commitSha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{7,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseCommitSha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{7,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previousRunId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "paths": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "attackClasses": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+                }
+              },
+              "maxRuntimeSec": {
+                "default": 14400,
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tokenBudget": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["paths", "attackClasses", "maxRuntimeSec", "tokenBudget"],
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+          },
+          "phases": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "runId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string",
+                  "enum": [
+                    "preflight",
+                    "recon",
+                    "hunt",
+                    "triage",
+                    "validate",
+                    "output",
+                    "record_verify",
+                    "report"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["pending", "running", "succeeded", "failed", "skipped"]
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "endedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sliceCount": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slicesDone": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "usage": {
+                  "type": "object",
+                  "properties": {
+                    "inputTokens": {
+                      "default": 0,
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outputTokens": {
+                      "default": 0,
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "costUsd": {
+                      "default": 0,
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": ["inputTokens", "outputTokens", "costUsd"],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "runId",
+                "name",
+                "status",
+                "startedAt",
+                "endedAt",
+                "sliceCount",
+                "slicesDone",
+                "usage"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "validators": {
+            "type": "object",
+            "properties": {
+              "findings": {
+                "type": "string",
+                "enum": ["pending", "passed", "failed"]
+              },
+              "coverageLedger": {
+                "type": "string",
+                "enum": ["pending", "passed", "failed"]
+              }
+            },
+            "required": ["findings", "coverageLedger"],
+            "additionalProperties": false
+          },
+          "skillVersion": {
+            "type": "string",
+            "minLength": 7
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "inputTokens": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outputTokens": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "costUsd": {
+                "default": 0,
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": ["inputTokens", "outputTokens", "costUsd"],
+            "additionalProperties": false
+          },
+          "artifacts": {
+            "type": "object",
+            "properties": {
+              "findingsJson": {
+                "type": ["string", "null"]
+              },
+              "coverageLedgerJson": {
+                "type": ["string", "null"]
+              },
+              "architectureMd": {
+                "type": ["string", "null"]
+              },
+              "reportMd": {
+                "type": ["string", "null"]
+              },
+              "findingsDetailMd": {
+                "type": ["string", "null"]
+              },
+              "needsValidationMd": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": [
+              "findingsJson",
+              "coverageLedgerJson",
+              "architectureMd",
+              "reportMd",
+              "findingsDetailMd",
+              "needsValidationMd"
+            ],
+            "additionalProperties": false
+          },
+          "failureReason": {
+            "type": ["string", "null"]
+          },
+          "retries": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "mode",
+          "repeat",
+          "trigger",
+          "ref",
+          "commitSha",
+          "baseCommitSha",
+          "previousRunId",
+          "scope",
+          "status",
+          "phases",
+          "validators",
+          "skillVersion",
+          "usage",
+          "artifacts",
+          "failureReason",
+          "retries",
+          "createdAt",
+          "startedAt",
+          "endedAt"
+        ],
+        "additionalProperties": false
+      },
+      "RunPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": ["focused", "incremental", "full"]
+                },
+                "repeat": {
+                  "default": 1,
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "trigger": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["manual", "api", "ci", "schedule", "release_tag", "webhook"]
+                    },
+                    "actor": {
+                      "type": ["string", "null"]
+                    },
+                    "ref": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": ["kind", "actor", "ref"],
+                  "additionalProperties": false
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "commitSha": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{7,64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "baseCommitSha": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{7,64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "previousRunId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "scope": {
+                  "type": "object",
+                  "properties": {
+                    "paths": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "attackClasses": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+                      }
+                    },
+                    "maxRuntimeSec": {
+                      "default": 14400,
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "tokenBudget": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["paths", "attackClasses", "maxRuntimeSec", "tokenBudget"],
+                  "additionalProperties": false
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+                },
+                "phases": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "runId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "enum": [
+                          "preflight",
+                          "recon",
+                          "hunt",
+                          "triage",
+                          "validate",
+                          "output",
+                          "record_verify",
+                          "report"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["pending", "running", "succeeded", "failed", "skipped"]
+                      },
+                      "startedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "endedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "sliceCount": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "slicesDone": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "usage": {
+                        "type": "object",
+                        "properties": {
+                          "inputTokens": {
+                            "default": 0,
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "outputTokens": {
+                            "default": 0,
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "costUsd": {
+                            "default": 0,
+                            "type": "number",
+                            "minimum": 0
+                          }
+                        },
+                        "required": ["inputTokens", "outputTokens", "costUsd"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "runId",
+                      "name",
+                      "status",
+                      "startedAt",
+                      "endedAt",
+                      "sliceCount",
+                      "slicesDone",
+                      "usage"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "validators": {
+                  "type": "object",
+                  "properties": {
+                    "findings": {
+                      "type": "string",
+                      "enum": ["pending", "passed", "failed"]
+                    },
+                    "coverageLedger": {
+                      "type": "string",
+                      "enum": ["pending", "passed", "failed"]
+                    }
+                  },
+                  "required": ["findings", "coverageLedger"],
+                  "additionalProperties": false
+                },
+                "skillVersion": {
+                  "type": "string",
+                  "minLength": 7
+                },
+                "usage": {
+                  "type": "object",
+                  "properties": {
+                    "inputTokens": {
+                      "default": 0,
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outputTokens": {
+                      "default": 0,
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "costUsd": {
+                      "default": 0,
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": ["inputTokens", "outputTokens", "costUsd"],
+                  "additionalProperties": false
+                },
+                "artifacts": {
+                  "type": "object",
+                  "properties": {
+                    "findingsJson": {
+                      "type": ["string", "null"]
+                    },
+                    "coverageLedgerJson": {
+                      "type": ["string", "null"]
+                    },
+                    "architectureMd": {
+                      "type": ["string", "null"]
+                    },
+                    "reportMd": {
+                      "type": ["string", "null"]
+                    },
+                    "findingsDetailMd": {
+                      "type": ["string", "null"]
+                    },
+                    "needsValidationMd": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "findingsJson",
+                    "coverageLedgerJson",
+                    "architectureMd",
+                    "reportMd",
+                    "findingsDetailMd",
+                    "needsValidationMd"
+                  ],
+                  "additionalProperties": false
+                },
+                "failureReason": {
+                  "type": ["string", "null"]
+                },
+                "retries": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "endedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "projectId",
+                "mode",
+                "repeat",
+                "trigger",
+                "ref",
+                "commitSha",
+                "baseCommitSha",
+                "previousRunId",
+                "scope",
+                "status",
+                "phases",
+                "validators",
+                "skillVersion",
+                "usage",
+                "artifacts",
+                "failureReason",
+                "retries",
+                "createdAt",
+                "startedAt",
+                "endedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["items", "total", "nextCursor"],
+        "additionalProperties": false
+      },
+      "CreateRunRequest": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "mode": {
+            "default": "focused",
+            "type": "string",
+            "enum": ["focused", "incremental", "full"]
+          },
+          "repeat": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "ref": {
+            "default": "HEAD",
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "paths": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "attackClasses": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+                }
+              },
+              "maxRuntimeSec": {
+                "default": 14400,
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tokenBudget": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "trigger": {
+            "default": {
+              "kind": "api",
+              "ref": null
+            },
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["manual", "api", "ci", "schedule", "release_tag", "webhook"]
+              },
+              "ref": {
+                "default": null,
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["kind"]
+          }
+        },
+        "required": ["projectId"]
+      },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "sourceRun": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "firstRun": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "attackClass": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+          },
+          "cwe": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^CWE-\\d{1,5}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rootCause": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endLine": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "symbol": {
+                "type": "string"
+              }
+            },
+            "required": ["file", "line"],
+            "additionalProperties": false
+          },
+          "trace": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["confirmed", "needs_validation", "rejected"]
+          },
+          "originalSeverity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verifiedSeverity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["new", "confirmed", "in_progress", "fixed", "accepted_risk", "false_positive"]
+          },
+          "owner": {
+            "type": ["string", "null"]
+          },
+          "firstSeen": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "slaDue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "adapter": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": ["adapter", "model"],
+            "additionalProperties": false
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "preflight",
+              "recon",
+              "hunt",
+              "triage",
+              "validate",
+              "output",
+              "record_verify",
+              "report"
+            ]
+          },
+          "blockers": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rejectionReason": {
+            "type": ["string", "null"]
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "codeChanges": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "fixedCode": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "fixedCode"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": ["strategy", "codeChanges"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "triageSuggestion": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "severityBand": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": ["informational", "low", "medium", "high", "critical"]
+                    },
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "required": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "ownerCandidates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "owner": {
+                          "type": "string"
+                        },
+                        "probability": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": ["owner", "probability"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "duplicateOf": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fingerprint": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                        },
+                        "probability": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": ["fingerprint", "probability"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "falsePositiveProbability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "model": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["adapter", "model"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["model"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rootCauseGroup": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "fingerprint",
+          "sourceRun",
+          "firstRun",
+          "attackClass",
+          "cwe",
+          "title",
+          "description",
+          "rootCause",
+          "location",
+          "trace",
+          "evidence",
+          "verdict",
+          "originalSeverity",
+          "verifiedSeverity",
+          "confidence",
+          "status",
+          "owner",
+          "firstSeen",
+          "lastSeen",
+          "slaDue",
+          "model",
+          "phase",
+          "blockers",
+          "rejectionReason",
+          "remediation",
+          "triageSuggestion",
+          "rootCauseGroup"
+        ],
+        "additionalProperties": false
+      },
+      "FindingPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "fingerprint": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                },
+                "sourceRun": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "firstRun": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "attackClass": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+                },
+                "cwe": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^CWE-\\d{1,5}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "rootCause": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "location": {
+                  "type": "object",
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "line": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "symbol": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file", "line"],
+                  "additionalProperties": false
+                },
+                "trace": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["entrypoint", "propagation", "sink"]
+                      },
+                      "file": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "scope": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["kind", "file", "line", "scope", "description"],
+                    "additionalProperties": false
+                  }
+                },
+                "evidence": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "description": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["file", "line", "description"],
+                    "additionalProperties": false
+                  }
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": ["confirmed", "needs_validation", "rejected"]
+                },
+                "originalSeverity": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["informational", "low", "medium", "high", "critical"]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "verifiedSeverity": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["informational", "low", "medium", "high", "critical"]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "confidence": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["low", "medium", "high"]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "confirmed",
+                    "in_progress",
+                    "fixed",
+                    "accepted_risk",
+                    "false_positive"
+                  ]
+                },
+                "owner": {
+                  "type": ["string", "null"]
+                },
+                "firstSeen": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "lastSeen": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "slaDue": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "model": {
+                  "type": "object",
+                  "properties": {
+                    "adapter": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["adapter", "model"],
+                  "additionalProperties": false
+                },
+                "phase": {
+                  "type": "string",
+                  "enum": [
+                    "preflight",
+                    "recon",
+                    "hunt",
+                    "triage",
+                    "validate",
+                    "output",
+                    "record_verify",
+                    "report"
+                  ]
+                },
+                "blockers": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "rejectionReason": {
+                  "type": ["string", "null"]
+                },
+                "remediation": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "strategy": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "codeChanges": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "file": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "fixedCode": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["file", "fixedCode"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["strategy", "codeChanges"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "triageSuggestion": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "severityBand": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "enum": ["informational", "low", "medium", "high", "critical"]
+                          },
+                          "additionalProperties": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "required": ["informational", "low", "medium", "high", "critical"]
+                        },
+                        "ownerCandidates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "owner": {
+                                "type": "string"
+                              },
+                              "probability": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              }
+                            },
+                            "required": ["owner", "probability"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "duplicateOf": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "fingerprint": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                              },
+                              "probability": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              }
+                            },
+                            "required": ["fingerprint", "probability"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "falsePositiveProbability": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "model": {
+                          "type": "object",
+                          "properties": {
+                            "adapter": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "model": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "version": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["adapter", "model"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["model"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rootCauseGroup": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": [
+                "id",
+                "projectId",
+                "fingerprint",
+                "sourceRun",
+                "firstRun",
+                "attackClass",
+                "cwe",
+                "title",
+                "description",
+                "rootCause",
+                "location",
+                "trace",
+                "evidence",
+                "verdict",
+                "originalSeverity",
+                "verifiedSeverity",
+                "confidence",
+                "status",
+                "owner",
+                "firstSeen",
+                "lastSeen",
+                "slaDue",
+                "model",
+                "phase",
+                "blockers",
+                "rejectionReason",
+                "remediation",
+                "triageSuggestion",
+                "rootCauseGroup"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["items", "total", "nextCursor"],
+        "additionalProperties": false
+      },
+      "FindingQuery": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "verdict": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["confirmed", "needs_validation", "rejected"]
+            }
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "confirmed",
+                "in_progress",
+                "fixed",
+                "accepted_risk",
+                "false_positive"
+              ]
+            }
+          },
+          "minSeverity": {
+            "type": "string",
+            "enum": ["informational", "low", "medium", "high", "critical"]
+          },
+          "attackClass": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+            }
+          },
+          "includeRejected": {
+            "default": false,
+            "type": "boolean"
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        }
+      },
+      "TriageRequest": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "enum": ["new", "confirmed", "in_progress", "fixed", "accepted_risk", "false_positive"]
+          },
+          "reason": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner": {
+            "type": ["string", "null"]
+          },
+          "expiresAt": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["to"]
+      },
+      "TriageEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "findingId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "from": {
+            "type": "string",
+            "enum": ["new", "confirmed", "in_progress", "fixed", "accepted_risk", "false_positive"]
+          },
+          "to": {
+            "type": "string",
+            "enum": ["new", "confirmed", "in_progress", "fixed", "accepted_risk", "false_positive"]
+          },
+          "actor": {
+            "type": "object",
+            "properties": {
+              "subject": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "security", "devops", "developer", "viewer"]
+              }
+            },
+            "required": ["subject", "role"],
+            "additionalProperties": false
+          },
+          "reason": {
+            "type": ["string", "null"]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": ["id", "findingId", "from", "to", "actor", "reason", "at"],
+        "additionalProperties": false
+      },
+      "Policy": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["enforce", "report_only"]
+          },
+          "rules": {
+            "default": [
+              {
+                "verdict": "confirmed",
+                "minSeverity": "high",
+                "attackClasses": []
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "verdict": {
+                  "type": "string",
+                  "const": "confirmed"
+                },
+                "minSeverity": {
+                  "type": "string",
+                  "enum": ["informational", "low", "medium", "high", "critical"]
+                },
+                "attackClasses": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["verdict", "minSeverity", "attackClasses"],
+              "additionalProperties": false
+            }
+          },
+          "slaDays": {
+            "default": {
+              "critical": 7,
+              "high": 30,
+              "medium": 90,
+              "low": 180,
+              "informational": null
+            },
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": ["informational", "low", "medium", "high", "critical"]
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": ["informational", "low", "medium", "high", "critical"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": ["id", "name", "mode", "rules", "slaDays", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "Exception": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["accepted_risk", "false_positive"]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "approver": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "fingerprint",
+          "kind",
+          "reason",
+          "approver",
+          "expiresAt",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "GateResult": {
+        "type": "object",
+        "properties": {
+          "pass": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["enforce", "report_only"]
+          },
+          "violations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "findingId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "fingerprint": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": ["informational", "low", "medium", "high", "critical"]
+                }
+              },
+              "required": ["findingId", "fingerprint", "severity"],
+              "additionalProperties": false
+            }
+          },
+          "excepted": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": ["pass", "mode", "violations", "excepted", "evaluatedAt"],
+        "additionalProperties": false
+      },
+      "PlatformEvent": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "run.queued"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "run.started"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "commitSha": {
+                    "type": ["string", "null"]
+                  },
+                  "skillVersion": {
+                    "type": "string"
+                  }
+                },
+                "required": ["commitSha", "skillVersion"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "phase.started"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "preflight",
+                      "recon",
+                      "hunt",
+                      "triage",
+                      "validate",
+                      "output",
+                      "record_verify",
+                      "report"
+                    ]
+                  },
+                  "sliceCount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["phase", "sliceCount"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "phase.done"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "preflight",
+                      "recon",
+                      "hunt",
+                      "triage",
+                      "validate",
+                      "output",
+                      "record_verify",
+                      "report"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["succeeded", "failed", "skipped"]
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "inputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "outputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "costUsd": {
+                        "default": 0,
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["inputTokens", "outputTokens", "costUsd"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["phase", "status", "usage"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "slice.started"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "sliceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "preflight",
+                      "recon",
+                      "hunt",
+                      "triage",
+                      "validate",
+                      "output",
+                      "record_verify",
+                      "report"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "attempt": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "model": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["adapter", "model"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["sliceId", "phase", "label", "attempt", "model"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "slice.attempt_failed"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "sliceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "attempt": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "model": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["adapter", "model"],
+                    "additionalProperties": false
+                  },
+                  "errorCode": {
+                    "type": "string"
+                  },
+                  "nextModel": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "adapter": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "model": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": ["adapter", "model"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["sliceId", "attempt", "model", "errorCode", "nextModel"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "slice.done"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "sliceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "preflight",
+                      "recon",
+                      "hunt",
+                      "triage",
+                      "validate",
+                      "output",
+                      "record_verify",
+                      "report"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["succeeded", "failed", "skipped"]
+                  },
+                  "model": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "adapter": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "model": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": ["adapter", "model"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "inputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "outputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "costUsd": {
+                        "default": 0,
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["inputTokens", "outputTokens", "costUsd"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["sliceId", "phase", "status", "model", "usage"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "validator.done"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "validator": {
+                    "type": "string",
+                    "enum": ["findings", "coverage_ledger"]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending", "passed", "failed"]
+                  },
+                  "errors": {
+                    "default": [],
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["validator", "status", "errors"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "finding.upserted"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "findingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": ["confirmed", "needs_validation", "rejected"]
+                  },
+                  "verifiedSeverity": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["informational", "low", "medium", "high", "critical"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "new",
+                      "confirmed",
+                      "in_progress",
+                      "fixed",
+                      "accepted_risk",
+                      "false_positive"
+                    ]
+                  },
+                  "isNew": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "findingId",
+                  "fingerprint",
+                  "verdict",
+                  "verifiedSeverity",
+                  "status",
+                  "isNew"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "run.completed"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "inputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "outputTokens": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "costUsd": {
+                        "default": 0,
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["inputTokens", "outputTokens", "costUsd"],
+                    "additionalProperties": false
+                  },
+                  "counts": {
+                    "type": "object",
+                    "properties": {
+                      "confirmed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "needsValidation": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "rejected": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": ["confirmed", "needsValidation", "rejected"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["usage", "counts"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "run.failed"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "phase": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "preflight",
+                          "recon",
+                          "hunt",
+                          "triage",
+                          "validate",
+                          "output",
+                          "record_verify",
+                          "report"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "willRetry": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["reason", "phase", "willRetry"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "run.cancelled"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": ["by"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "type": {
+                "type": "string",
+                "const": "gate.evaluated"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "result": {
+                    "type": "object",
+                    "properties": {
+                      "pass": {
+                        "type": "boolean"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": ["enforce", "report_only"]
+                      },
+                      "violations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "findingId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "fingerprint": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+                            },
+                            "severity": {
+                              "type": "string",
+                              "enum": ["informational", "low", "medium", "high", "critical"]
+                            }
+                          },
+                          "required": ["findingId", "fingerprint", "severity"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "excepted": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "evaluatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      }
+                    },
+                    "required": ["pass", "mode", "violations", "excepted", "evaluatedAt"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["result"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "runId", "projectId", "seq", "at", "type", "payload"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "repoUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "defaultBranch": {
+            "default": "main",
+            "type": "string",
+            "minLength": 1
+          },
+          "team": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "policyId": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelRouting": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                },
+                "primary": {
+                  "type": "object",
+                  "properties": {
+                    "adapter": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["adapter", "model"]
+                },
+                "fallbacks": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["adapter", "model"]
+                  }
+                },
+                "requireDifferentFamilyFrom": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                }
+              },
+              "required": ["task", "primary"]
+            }
+          },
+          "escalation": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "thresholds": {
+                    "default": {},
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "defaultThreshold": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "uncertaintyBand": {
+                    "default": 0.1,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "criticalPaths": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monthlyTokenBudget": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["slug", "name", "repoUrl", "team", "clientId"]
+      },
+      "PatchProjectRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "repoUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "defaultBranch": {
+            "default": "main",
+            "type": "string",
+            "minLength": 1
+          },
+          "team": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "policyId": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelRouting": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                },
+                "primary": {
+                  "type": "object",
+                  "properties": {
+                    "adapter": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["adapter", "model"]
+                },
+                "fallbacks": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "adapter": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["adapter", "model"]
+                  }
+                },
+                "requireDifferentFamilyFrom": {
+                  "type": "string",
+                  "enum": [
+                    "recon",
+                    "hunt",
+                    "validate",
+                    "record_verify",
+                    "report",
+                    "fix_draft",
+                    "decide"
+                  ]
+                }
+              },
+              "required": ["task", "primary"]
+            }
+          },
+          "escalation": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "thresholds": {
+                    "default": {},
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "defaultThreshold": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "uncertaintyBand": {
+                    "default": 0.1,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "criticalPaths": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monthlyTokenBudget": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PolicyRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["enforce", "report_only"]
+          },
+          "rules": {
+            "default": [
+              {
+                "verdict": "confirmed",
+                "minSeverity": "high",
+                "attackClasses": []
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "verdict": {
+                  "type": "string",
+                  "const": "confirmed"
+                },
+                "minSeverity": {
+                  "type": "string",
+                  "enum": ["informational", "low", "medium", "high", "critical"]
+                },
+                "attackClasses": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["verdict", "minSeverity"]
+            }
+          },
+          "slaDays": {
+            "default": {
+              "critical": 7,
+              "high": 30,
+              "medium": 90,
+              "low": 180,
+              "informational": null
+            },
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": ["informational", "low", "medium", "high", "critical"]
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": ["informational", "low", "medium", "high", "critical"]
+          }
+        },
+        "required": ["name", "mode"]
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    }
+  }
+}

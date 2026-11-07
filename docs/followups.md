@@ -3,9 +3,9 @@
 Items found during lead review and testing. Owner in brackets.
 
 - [done] `packages/adapters/test/http.test.ts` timeout-retry test made load-independent by the lead.
-- [WS9] Org Overview "Findings by Verification Verdict" counts only open findings, so the
+- [done] Org Overview "Findings by Verification Verdict" counts only open findings, so the
   "rejected" row stays 0 even with "Show rejected findings" on (rejected findings are closed as
-  `false_positive`). Count all rejected findings in that row, or relabel it.
+  `false_positive`). Fixed: now counts all rejected candidates in that row.
 - [done] Apply WS2 contract requests in `packages/core` (`docs/workstreams/WS2-contract-request.md`):
   per-project webhook secret ref, exception revoke + policy clientId, atomic event seq, store readiness probe.
 - [done] `apps/worker/src/fakes.ts` holds test fakes (incl. a non-isolating sandbox) in `src`;

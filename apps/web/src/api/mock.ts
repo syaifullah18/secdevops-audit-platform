@@ -443,8 +443,12 @@ export class MockDataStore {
       if (f.verifiedSeverity) {
         openBySeverity[f.verifiedSeverity] = (openBySeverity[f.verifiedSeverity] || 0) + 1;
       }
-      openByVerdict[f.verdict] = (openByVerdict[f.verdict] || 0) + 1;
+      if (f.verdict !== "rejected") {
+        openByVerdict[f.verdict] = (openByVerdict[f.verdict] || 0) + 1;
+      }
     }
+    // Rejected findings are triaged/closed as false_positive; count all rejected candidates in that row.
+    openByVerdict["rejected"] = this.findings.filter((f) => f.verdict === "rejected").length;
 
     const now = new Date();
     const slaBreachesCount = openFindings.filter(

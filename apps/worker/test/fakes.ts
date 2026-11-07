@@ -24,6 +24,7 @@ import {
   type Slice,
   type Store,
   type TriageEvent,
+  type UnsequencedEvent,
   type UpsertResult,
 } from "@sdap/core";
 
@@ -261,7 +262,14 @@ export class FakeStore implements Store {
   };
 
   readonly policies: PolicyRepo = {
-    get: async (id: string) => this.policiesMap.get(id) ?? null,
+    get: async (id: string, scope: AccessScope) => {
+      const p = this.policiesMap.get(id);
+      if (!p) return null;
+      if (p.clientId === null || scope.clientIds === "*" || scope.clientIds.includes(p.clientId)) {
+        return p;
+      }
+      return null;
+    },
     upsert: async (p: Policy) => {
       this.policiesMap.set(p.id, p);
       return p;
@@ -273,11 +281,27 @@ export class FakeStore implements Store {
       this.exceptionsMap.set(e.projectId, list);
       return e;
     },
+    revokeException: async (id: string, _at: string) => {
+      for (const [projectId, list] of this.exceptionsMap.entries()) {
+        this.exceptionsMap.set(
+          projectId,
+          list.filter((e) => e.id !== id),
+        );
+      }
+    },
   };
 
   readonly events: EventRepo = {
     append: async (e: PlatformEvent) => {
       this.eventsList.push(e);
+    },
+    appendNext: async (e: UnsequencedEvent) => {
+      const forRun = this.eventsList.filter((ev) => ev.runId === e.runId);
+      const maxSeq = forRun.reduce((max, ev) => Math.max(max, ev.seq), -1);
+      const seq = maxSeq + 1;
+      const full = { ...e, seq } as PlatformEvent;
+      this.eventsList.push(full);
+      return full;
     },
     listByRun: async (runId: string, afterSeq?: number) => {
       return this.eventsList.filter(
@@ -295,6 +319,8 @@ export class FakeStore implements Store {
   async tx<T>(fn: (s: Store) => Promise<T>): Promise<T> {
     return fn(this);
   }
+
+  async ping(): Promise<void> {}
 
   async close(): Promise<void> {}
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Id, IsoDateTime } from "./common.js";
+import { Id, IsoDateTime, Slug } from "./common.js";
 import { Severity, isOpenStatus, severityAtLeast } from "./enums.js";
 import { Fingerprint, type Finding } from "./finding.js";
 
@@ -30,6 +30,8 @@ export const DEFAULT_SLA_DAYS: SlaDays = {
 export const Policy = z.object({
   id: Id,
   name: z.string().min(1),
+  /** Owning client; null means platform-wide (readable by every client, writable by admins). */
+  clientId: Slug.nullable().default(null),
   /** report_only never fails the gate; it only reports what would have failed. */
   mode: z.enum(["enforce", "report_only"]),
   rules: z

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, ilike, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
@@ -30,6 +30,7 @@ import {
   type Store,
   type TriageEvent,
   TriageEvent as TriageEventContract,
+  type UnsequencedEvent,
   type UpsertResult,
 } from "@sdap/core";
 import { mergeFindings, secondaryFingerprint } from "@sdap/normalizer";
@@ -38,7 +39,10 @@ import * as schema from "./schema.js";
 const { Pool } = pg;
 
 // Helper to check access scope on client_id column
-const scopeCondition = (column: typeof schema.projects.clientId, scope: AccessScope) => {
+const scopeCondition = (
+  column: typeof schema.projects.clientId | typeof schema.policies.clientId,
+  scope: AccessScope,
+) => {
   if (scope.clientIds === "*") {
     return sql`TRUE`;
   }
@@ -81,6 +85,10 @@ export class PgStore implements Store {
     });
   }
 
+  async ping(): Promise<void> {
+    await this.db.execute(sql`SELECT 1`);
+  }
+
   async close(): Promise<void> {
     if (this.pool) {
       await this.pool.end();
@@ -102,6 +110,7 @@ class PgProjectRepo implements ProjectRepo {
       team: validated.team,
       clientId: validated.clientId,
       policyId: validated.policyId,
+      webhookSecretRef: validated.webhookSecretRef,
       modelRouting: validated.modelRouting,
       escalation: validated.escalation,
       criticalPaths: validated.criticalPaths,
@@ -130,6 +139,7 @@ class PgProjectRepo implements ProjectRepo {
       team: row.team,
       clientId: row.clientId,
       policyId: row.policyId,
+      webhookSecretRef: row.webhookSecretRef,
       modelRouting: row.modelRouting,
       escalation: row.escalation,
       criticalPaths: row.criticalPaths,
@@ -156,6 +166,7 @@ class PgProjectRepo implements ProjectRepo {
         team: row.team,
         clientId: row.clientId,
         policyId: row.policyId,
+        webhookSecretRef: row.webhookSecretRef,
         modelRouting: row.modelRouting,
         escalation: row.escalation,
         criticalPaths: row.criticalPaths,
@@ -175,6 +186,8 @@ class PgProjectRepo implements ProjectRepo {
     if (patch.team !== undefined) updateValues["team"] = patch.team;
     if (patch.clientId !== undefined) updateValues["clientId"] = patch.clientId;
     if (patch.policyId !== undefined) updateValues["policyId"] = patch.policyId;
+    if (patch.webhookSecretRef !== undefined)
+      updateValues["webhookSecretRef"] = patch.webhookSecretRef;
     if (patch.modelRouting !== undefined) updateValues["modelRouting"] = patch.modelRouting;
     if (patch.escalation !== undefined) updateValues["escalation"] = patch.escalation;
     if (patch.criticalPaths !== undefined) updateValues["criticalPaths"] = patch.criticalPaths;
@@ -199,6 +212,7 @@ class PgProjectRepo implements ProjectRepo {
       team: row.team,
       clientId: row.clientId,
       policyId: row.policyId,
+      webhookSecretRef: row.webhookSecretRef,
       modelRouting: row.modelRouting,
       escalation: row.escalation,
       criticalPaths: row.criticalPaths,
@@ -910,11 +924,15 @@ class PgFindingRepo implements FindingRepo {
 class PgPolicyRepo implements PolicyRepo {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
-  async get(id: string): Promise<Policy | null> {
+  async get(id: string, scope: AccessScope): Promise<Policy | null> {
+    const visible =
+      scope.clientIds === "*"
+        ? sql`TRUE`
+        : or(isNull(schema.policies.clientId), scopeCondition(schema.policies.clientId, scope));
     const rows = await this.db
       .select()
       .from(schema.policies)
-      .where(eq(schema.policies.id, id))
+      .where(and(eq(schema.policies.id, id), visible))
       .limit(1);
 
     const row = rows[0];
@@ -922,6 +940,7 @@ class PgPolicyRepo implements PolicyRepo {
     return PolicyContract.parse({
       id: row.id,
       name: row.name,
+      clientId: row.clientId,
       mode: row.mode,
       rules: row.rules,
       slaDays: row.slaDays,
@@ -937,6 +956,7 @@ class PgPolicyRepo implements PolicyRepo {
       .values({
         id: validated.id,
         name: validated.name,
+        clientId: validated.clientId,
         mode: validated.mode,
         rules: validated.rules,
         slaDays: validated.slaDays,
@@ -947,6 +967,7 @@ class PgPolicyRepo implements PolicyRepo {
         target: schema.policies.id,
         set: {
           name: validated.name,
+          clientId: validated.clientId,
           mode: validated.mode,
           rules: validated.rules,
           slaDays: validated.slaDays,
@@ -961,7 +982,7 @@ class PgPolicyRepo implements PolicyRepo {
     const rows = await this.db
       .select()
       .from(schema.exceptions)
-      .where(eq(schema.exceptions.projectId, projectId))
+      .where(and(eq(schema.exceptions.projectId, projectId), isNull(schema.exceptions.revokedAt)))
       .orderBy(desc(schema.exceptions.createdAt));
 
     return rows.map((r) => ({
@@ -989,6 +1010,13 @@ class PgPolicyRepo implements PolicyRepo {
     });
     return e;
   }
+
+  async revokeException(id: string, at: string): Promise<void> {
+    await this.db
+      .update(schema.exceptions)
+      .set({ revokedAt: at })
+      .where(and(eq(schema.exceptions.id, id), isNull(schema.exceptions.revokedAt)));
+  }
 }
 
 class PgEventRepo implements EventRepo {
@@ -1004,6 +1032,30 @@ class PgEventRepo implements EventRepo {
       type: validated.type,
       payload: validated.payload,
       at: validated.at,
+    });
+  }
+
+  async appendNext(e: UnsequencedEvent): Promise<PlatformEvent> {
+    // A per-run transaction-scoped advisory lock serialises allocation across API and worker
+    // replicas; the unique (run_id, seq) index stays as the backstop.
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${e.runId}))`);
+      const rows = await tx
+        .select({ max: sql<number | null>`max(${schema.events.seq})` })
+        .from(schema.events)
+        .where(eq(schema.events.runId, e.runId));
+      const seq = rows[0]?.max === null || rows[0]?.max === undefined ? 0 : Number(rows[0].max) + 1;
+      const validated = PlatformEventContract.parse({ ...e, seq });
+      await tx.insert(schema.events).values({
+        id: validated.id,
+        runId: validated.runId,
+        projectId: validated.projectId,
+        seq: validated.seq,
+        type: validated.type,
+        payload: validated.payload,
+        at: validated.at,
+      });
+      return validated;
     });
   }
 

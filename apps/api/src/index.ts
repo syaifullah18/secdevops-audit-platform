@@ -13,3 +13,5 @@ export * from "./errors.js";
 export * from "./openapi.js";
 export * from "./queue.js";
 export * from "./rbac.js";
+export * from "./db/index.js";
+export * from "./metrics.js";

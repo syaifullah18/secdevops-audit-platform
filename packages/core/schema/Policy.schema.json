@@ -11,6 +11,20 @@
       "type": "string",
       "minLength": 1
     },
+    "clientId": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "mode": {
       "type": "string",
       "enum": ["enforce", "report_only"]

@@ -39,6 +39,7 @@ describe("PostgreSQL Store tests", () => {
       team: "team-alpha",
       clientId: CLIENT_ALPHA,
       policyId: null,
+      webhookSecretRef: null,
       modelRouting: [],
       escalation: null,
       criticalPaths: ["auth/**"],
@@ -56,6 +57,7 @@ describe("PostgreSQL Store tests", () => {
       team: "team-beta",
       clientId: CLIENT_BETA,
       policyId: null,
+      webhookSecretRef: null,
       modelRouting: [],
       escalation: null,
       criticalPaths: [],
@@ -349,6 +351,7 @@ describe("PostgreSQL Store tests", () => {
       const policy: Policy = {
         id: "00000000-0000-4000-8000-0000000004a1",
         name: "Default Strict Policy",
+        clientId: null,
         mode: "enforce",
         rules: [{ verdict: "confirmed", minSeverity: "high", attackClasses: [] }],
         slaDays: DEFAULT_SLA_DAYS,
@@ -357,7 +360,7 @@ describe("PostgreSQL Store tests", () => {
       };
 
       await store.policies.upsert(policy);
-      const fetchedPolicy = await store.policies.get(policy.id);
+      const fetchedPolicy = await store.policies.get(policy.id, { clientIds: "*" });
       expect(fetchedPolicy?.name).toBe("Default Strict Policy");
 
       const exception = {

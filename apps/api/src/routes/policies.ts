@@ -10,25 +10,11 @@ import {
   type Store,
 } from "@sdap/core";
 import { setAudit } from "../audit.js";
-import { NotFoundError } from "../errors.js";
+import { ForbiddenError, NotFoundError } from "../errors.js";
 import { parseId, parseWith } from "../http.js";
-import { requireRoles } from "../rbac.js";
+import { requireRoles, scopeIncludes } from "../rbac.js";
 
 export const PolicyInput = Policy.omit({ id: true, createdAt: true, updatedAt: true });
-
-/**
- * Policies carry no client of their own; they are visible through the projects that use them.
- * A scoped caller may only see a policy attached to one of their projects.
- */
-const policyVisible = async (
-  store: Store,
-  scope: AccessScope,
-  policyId: string,
-): Promise<boolean> => {
-  if (scope.clientIds === "*") return true;
-  const projects = await store.projects.list(scope);
-  return projects.some((p) => p.policyId === policyId);
-};
 
 /** Used when a project has no policy yet: block on confirmed high and above. */
 const defaultPolicy = (): Policy => {
@@ -36,6 +22,7 @@ const defaultPolicy = (): Policy => {
   return {
     id: "00000000-0000-4000-8000-000000000000",
     name: "Default policy",
+    clientId: null,
     mode: "enforce",
     rules: [{ verdict: "confirmed", minSeverity: "high", attackClasses: [] }],
     slaDays: DEFAULT_SLA_DAYS,
@@ -101,8 +88,8 @@ export const policyRoutes: FastifyPluginAsync<{ store: Store }> = async (app, op
 
   app.get("/policies/:id", async (req) => {
     const id = parseId((req.params as { id: string }).id, "Policy");
-    const policy = await store.policies.get(id);
-    if (!policy || !(await policyVisible(store, req.scope, id))) {
+    const policy = await store.policies.get(id, req.scope);
+    if (!policy) {
       throw new NotFoundError("Policy not found");
     }
     return policy;
@@ -113,15 +100,28 @@ export const policyRoutes: FastifyPluginAsync<{ store: Store }> = async (app, op
     setAudit(req, { action: "policy.upsert", target: id });
     const input = parseWith(PolicyInput, req.body, "policy");
 
-    const existing = await store.policies.get(id);
-    if (existing && !(await policyVisible(store, req.scope, id))) {
-      throw new NotFoundError("Policy not found");
+    const globalExisting = await store.policies.get(id, { clientIds: "*" });
+    if (globalExisting && req.scope.clientIds !== "*") {
+      if (globalExisting.clientId === null || !scopeIncludes(req.scope, globalExisting.clientId)) {
+        throw new NotFoundError("Policy not found");
+      }
     }
+
+    let effectiveClientId = input.clientId;
+    if (req.scope.clientIds !== "*") {
+      if (effectiveClientId === null) {
+        effectiveClientId = req.scope.clientIds[0] ?? null;
+      } else if (!scopeIncludes(req.scope, effectiveClientId)) {
+        throw new ForbiddenError("Cannot assign policy to a client outside your scope");
+      }
+    }
+
     const now = new Date().toISOString();
     return store.policies.upsert({
       ...input,
+      clientId: effectiveClientId,
       id,
-      createdAt: existing?.createdAt ?? now,
+      createdAt: globalExisting?.createdAt ?? now,
       updatedAt: now,
     });
   });
@@ -132,7 +132,8 @@ export const policyRoutes: FastifyPluginAsync<{ store: Store }> = async (app, op
     if (!project) throw new NotFoundError("Project not found");
 
     const policy =
-      (project.policyId ? await store.policies.get(project.policyId) : null) ?? defaultPolicy();
+      (project.policyId ? await store.policies.get(project.policyId, req.scope) : null) ??
+      defaultPolicy();
     const now = new Date();
     const exceptions = await store.policies.listExceptions(id);
     const inputs = await gateInputs(store, req.scope, id, exceptions, now);

@@ -18,6 +18,11 @@ export const Project = z.object({
   /** Tenant / client slug. */
   clientId: Slug,
   policyId: Id.nullable(),
+  /**
+   * Reference to the webhook HMAC secret in the operator's secret store (e.g. an env var name
+   * or vault path). Never the secret itself. null: no webhook configured.
+   */
+  webhookSecretRef: z.string().min(1).max(256).nullable().default(null),
   /** Per-project model routing; falls back to the platform default when empty. */
   modelRouting: ModelRouting.default([]),
   escalation: EscalationPolicy.nullable().default(null),

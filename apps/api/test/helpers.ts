@@ -113,6 +113,7 @@ export const sampleProject = (overrides: Partial<Project> = {}): Project => ({
   team: "team-alpha",
   clientId: "client-a",
   policyId: null,
+  webhookSecretRef: null,
   modelRouting: [],
   escalation: null,
   criticalPaths: ["auth/**"],
@@ -214,6 +215,7 @@ export const sampleFinding = (overrides: Partial<Finding> = {}): Finding => ({
 export const samplePolicy = (overrides: Partial<Policy> = {}): Policy => ({
   id: "00000000-0000-4000-8000-000000000201",
   name: "Default Enforce Policy",
+  clientId: null,
   mode: "enforce",
   rules: [{ verdict: "confirmed", minSeverity: "high", attackClasses: [] }],
   slaDays: { critical: 7, high: 30, medium: 90, low: 180, informational: null },

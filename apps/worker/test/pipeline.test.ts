@@ -6,7 +6,7 @@ import { type ModelRoute, type Run, modelFamily } from "@sdap/core";
 import { describe, expect, it } from "vitest";
 import { AgentCliAdapter, InMemoryAdapterRegistry } from "../src/agent-adapter.js";
 import { parseWorkerConfig } from "../src/config.js";
-import { FakeSandboxRunner, FakeStore } from "../src/fakes.js";
+import { FakeSandboxRunner, FakeStore } from "./fakes.js";
 import { AuditPipeline } from "../src/pipeline.js";
 
 const fakeAgentScript = path.resolve(__dirname, "fixtures/fake-agent.cjs");

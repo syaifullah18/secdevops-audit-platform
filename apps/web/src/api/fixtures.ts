@@ -36,6 +36,7 @@ export const FIXTURE_PROJECTS: Project[] = [
     team: "iam-core",
     clientId: "acme-corp",
     policyId: FIXTURE_POLICY_1_ID,
+    webhookSecretRef: null,
     modelRouting: [
       {
         task: "validate",
@@ -58,6 +59,7 @@ export const FIXTURE_PROJECTS: Project[] = [
     team: "payments-infra",
     clientId: "acme-corp",
     policyId: FIXTURE_POLICY_1_ID,
+    webhookSecretRef: null,
     modelRouting: [],
     escalation: null,
     criticalPaths: ["services/ledger/**", "src/crypto/**"],
@@ -74,6 +76,7 @@ export const FIXTURE_PROJECTS: Project[] = [
     team: "data-platform",
     clientId: "acme-corp",
     policyId: FIXTURE_POLICY_2_ID,
+    webhookSecretRef: null,
     modelRouting: [],
     escalation: null,
     criticalPaths: ["pipeline/**"],
@@ -87,6 +90,7 @@ export const FIXTURE_POLICIES: Policy[] = [
   {
     id: FIXTURE_POLICY_1_ID,
     name: "Production Strict Policy",
+    clientId: null,
     mode: "enforce",
     rules: [
       { verdict: "confirmed", minSeverity: "high", attackClasses: [] },
@@ -105,6 +109,7 @@ export const FIXTURE_POLICIES: Policy[] = [
   {
     id: FIXTURE_POLICY_2_ID,
     name: "Internal Services Report-Only",
+    clientId: null,
     mode: "report_only",
     rules: [{ verdict: "confirmed", minSeverity: "critical", attackClasses: [] }],
     slaDays: {

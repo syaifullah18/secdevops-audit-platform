@@ -71,6 +71,7 @@ export class MockDataStore {
       team: data.team || "default-team",
       clientId: data.clientId || "default-client",
       policyId: data.policyId || this.policies[0]?.id || null,
+      webhookSecretRef: null,
       modelRouting: data.modelRouting || [],
       escalation: data.escalation || null,
       criticalPaths: data.criticalPaths || [],

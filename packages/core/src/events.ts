@@ -105,6 +105,12 @@ export const PlatformEvent = z.discriminatedUnion("type", [
 ]);
 export type PlatformEvent = z.infer<typeof PlatformEvent>;
 export type PlatformEventType = PlatformEvent["type"];
+/** An event before the store assigns its `seq` (distributes over the union). */
+export type UnsequencedEvent = PlatformEvent extends infer E
+  ? E extends PlatformEvent
+    ? Omit<E, "seq">
+    : never
+  : never;
 export type EventOf<T extends PlatformEventType> = Extract<PlatformEvent, { type: T }>;
 
 /** Sink the worker emits through; implementations publish to Redis and/or persist. */

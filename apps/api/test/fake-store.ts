@@ -23,6 +23,7 @@ import {
   type Slice,
   type Store,
   type TriageEvent,
+  type UnsequencedEvent,
   type UpsertResult,
 } from "@sdap/core";
 import { mergeFindings, secondaryFingerprint } from "@sdap/normalizer";
@@ -64,6 +65,8 @@ export class MemoryStore implements Store {
   async tx<T>(fn: (s: Store) => Promise<T>): Promise<T> {
     return fn(this);
   }
+
+  async ping(): Promise<void> {}
 
   async close(): Promise<void> {
     // In-memory store no-op
@@ -407,8 +410,11 @@ class MemoryFindingRepo implements FindingRepo {
 class MemoryPolicyRepo implements PolicyRepo {
   constructor(private readonly store: MemoryStore) {}
 
-  async get(id: string): Promise<Policy | null> {
-    return this.store.policyList.find((p) => p.id === id) ?? null;
+  async get(id: string, scope: AccessScope): Promise<Policy | null> {
+    const p = this.store.policyList.find((item) => item.id === id);
+    if (!p) return null;
+    if (p.clientId === null || matchesScope(p.clientId, scope)) return p;
+    return null;
   }
 
   async upsert(p: Policy): Promise<Policy> {
@@ -422,12 +428,21 @@ class MemoryPolicyRepo implements PolicyRepo {
   }
 
   async listExceptions(projectId: string): Promise<Exception[]> {
-    return this.store.exceptionList.filter((e) => e.projectId === projectId);
+    return this.store.exceptionList.filter(
+      (e) => e.projectId === projectId && !(e as unknown as { revokedAt?: string }).revokedAt,
+    );
   }
 
   async addException(e: Exception): Promise<Exception> {
     this.store.exceptionList.push(e);
     return e;
+  }
+
+  async revokeException(id: string, at: string): Promise<void> {
+    const exc = this.store.exceptionList.find((e) => e.id === id);
+    if (exc) {
+      (exc as unknown as { revokedAt?: string }).revokedAt = at;
+    }
   }
 }
 
@@ -436,6 +451,15 @@ class MemoryEventRepo implements EventRepo {
 
   async append(e: PlatformEvent): Promise<void> {
     this.store.eventList.push(e);
+  }
+
+  async appendNext(e: UnsequencedEvent): Promise<PlatformEvent> {
+    const forRun = this.store.eventList.filter((ev) => ev.runId === e.runId);
+    const maxSeq = forRun.reduce((max, ev) => Math.max(max, ev.seq), -1);
+    const seq = maxSeq + 1;
+    const full = { ...e, seq } as PlatformEvent;
+    this.store.eventList.push(full);
+    return full;
   }
 
   async listByRun(runId: string, afterSeq?: number): Promise<PlatformEvent[]> {

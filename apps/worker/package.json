@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@sdap/adapters": "workspace:*",
+    "@sdap/api": "workspace:*",
     "@sdap/core": "workspace:*",
     "@sdap/normalizer": "workspace:*",
     "@sdap/sandbox": "workspace:*",

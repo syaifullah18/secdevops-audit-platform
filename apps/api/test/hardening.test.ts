@@ -279,7 +279,7 @@ describe("Findings and projects", () => {
   });
 
   it("a client cannot read or overwrite a policy attached to another client's project", async () => {
-    const policy = samplePolicy();
+    const policy = samplePolicy({ clientId: project.clientId });
     await ctx.store.policies.upsert(policy);
     await ctx.store.projects.update(project.id, { policyId: policy.id });
     const other = await ctx.issueToken({
@@ -300,7 +300,7 @@ describe("Findings and projects", () => {
       payload: { name: "weakened", mode: "report_only" },
     });
     expect(write.statusCode).toBe(404);
-    expect((await ctx.store.policies.get(policy.id))?.mode).toBe("enforce");
+    expect((await ctx.store.policies.get(policy.id, { clientIds: "*" }))?.mode).toBe("enforce");
 
     const owner = await ctx.issueToken({
       subject: "sec-a",

@@ -8,7 +8,7 @@ import {
   InMemoryAdapterRegistry,
   mapCliFailureToErrorCode,
 } from "../src/agent-adapter.js";
-import { FakeSandboxRunner } from "../src/fakes.js";
+import { FakeSandboxRunner } from "./fakes.js";
 
 describe("mapCliFailureToErrorCode", () => {
   it("maps timeout killedBy to timeout", () => {

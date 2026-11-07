@@ -30,7 +30,6 @@ export {
 export { createDefaultImportFindings } from "./normalizer-hook.js";
 export { AuditPipeline, type AuditPipelineDependencies } from "./pipeline.js";
 export { createAuditWorker, type AuditWorkerOptions, type AuditWorkerInstance } from "./worker.js";
-export { FakeSandboxRunner, FakeStore } from "./fakes.js";
 export type {
   CancellationToken,
   ImportFindingsFn,

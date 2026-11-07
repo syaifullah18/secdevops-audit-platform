@@ -51,6 +51,19 @@
         }
       ]
     },
+    "webhookSecretRef": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "modelRouting": {
       "default": [],
       "type": "array",

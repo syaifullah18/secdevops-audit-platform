@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { Id, Project, type Store } from "@sdap/core";
+import { type AccessScope, Id, Project, type Store } from "@sdap/core";
 import { setAudit } from "../audit.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../errors.js";
 import { parseId, parseWith } from "../http.js";
@@ -25,7 +25,7 @@ export const projectRoutes: FastifyPluginAsync<{ store: Store }> = async (app, o
     if (!scopeIncludes(req.scope, input.clientId)) {
       throw new ForbiddenError("Cannot create a project for a client outside your scope");
     }
-    await assertPolicyExists(store, input.policyId);
+    await assertPolicyExists(store, req.scope, input.policyId);
     // Slugs are unique across all clients, so the check must not be scope-limited.
     const all = await store.projects.list({ clientIds: "*" });
     if (all.some((p) => p.slug === input.slug)) {
@@ -68,15 +68,19 @@ export const projectRoutes: FastifyPluginAsync<{ store: Store }> = async (app, o
         throw new ConflictError(`Project slug "${body.slug}" is already in use`);
       }
     }
-    if ("policyId" in patch) await assertPolicyExists(store, body.policyId ?? null);
+    if ("policyId" in patch) await assertPolicyExists(store, req.scope, body.policyId ?? null);
 
     return store.projects.update(id, { ...patch, updatedAt: new Date().toISOString() });
   });
 };
 
-const assertPolicyExists = async (store: Store, policyId: string | null): Promise<void> => {
+const assertPolicyExists = async (
+  store: Store,
+  scope: AccessScope,
+  policyId: string | null,
+): Promise<void> => {
   if (policyId === null) return;
-  if (!(await store.policies.get(policyId))) {
+  if (!(await store.policies.get(policyId, scope))) {
     throw new BadRequestError("policyId does not reference an existing policy");
   }
 };

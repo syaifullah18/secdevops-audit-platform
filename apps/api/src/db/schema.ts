@@ -40,6 +40,8 @@ import type {
 export const policies = pgTable("policies", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
+  /** null = platform-wide policy. */
+  clientId: varchar("client_id", { length: 64 }),
   mode: text("mode").$type<"enforce" | "report_only">().notNull(),
   rules: jsonb("rules").$type<GateRule[]>().notNull(),
   slaDays: jsonb("sla_days").$type<SlaDays>().notNull(),
@@ -58,6 +60,8 @@ export const projects = pgTable(
     team: varchar("team", { length: 64 }).notNull(),
     clientId: varchar("client_id", { length: 64 }).notNull(),
     policyId: uuid("policy_id").references(() => policies.id),
+    /** Reference into the secret store, never the secret. */
+    webhookSecretRef: text("webhook_secret_ref"),
     modelRouting: jsonb("model_routing").$type<ModelRoute[]>().notNull().default([]),
     escalation: jsonb("escalation").$type<EscalationPolicy | null>().default(null),
     criticalPaths: jsonb("critical_paths").$type<string[]>().notNull().default([]),
@@ -227,6 +231,8 @@ export const exceptions = pgTable(
     approver: text("approver").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+    /** Set when the exception is revoked (e.g. finding reopened); kept for audit. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
   },
   (table) => [index("exceptions_project_id_idx").on(table.projectId)],
 );

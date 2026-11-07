@@ -288,6 +288,9 @@ importers:
       '@sdap/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
+      '@sdap/api':
+        specifier: workspace:*
+        version: link:../api
       '@sdap/core':
         specifier: workspace:*
         version: link:../../packages/core

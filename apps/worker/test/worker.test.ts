@@ -6,7 +6,7 @@ import type { Run, RunJob } from "@sdap/core";
 import { describe, expect, it } from "vitest";
 import { AgentCliAdapter, InMemoryAdapterRegistry } from "../src/agent-adapter.js";
 import { parseWorkerConfig } from "../src/config.js";
-import { FakeSandboxRunner, FakeStore } from "../src/fakes.js";
+import { FakeSandboxRunner, FakeStore } from "./fakes.js";
 import { createAuditWorker } from "../src/worker.js";
 
 const fakeAgentScript = path.resolve(__dirname, "fixtures/fake-agent.cjs");

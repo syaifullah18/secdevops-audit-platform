@@ -1,4 +1,4 @@
-import type { PlatformEvent } from "./events.js";
+import type { PlatformEvent, UnsequencedEvent } from "./events.js";
 import type { Finding, TriageEvent } from "./finding.js";
 import type { FindingQuery } from "./api.js";
 import type { Exception, Policy } from "./policy.js";
@@ -65,14 +65,24 @@ export interface FindingRepo {
 }
 
 export interface PolicyRepo {
-  get(id: string): Promise<Policy | null>;
+  /** Visible when `policy.clientId` is null (platform-wide) or in `scope`. */
+  get(id: string, scope: AccessScope): Promise<Policy | null>;
   upsert(p: Policy): Promise<Policy>;
+  /** Active (not revoked) exceptions of a project. */
   listExceptions(projectId: string): Promise<Exception[]>;
   addException(e: Exception): Promise<Exception>;
+  /**
+   * Revoke an exception, e.g. when its finding is reopened. Revoked exceptions are kept for
+   * audit but no longer returned by listExceptions. Revoking twice is a no-op.
+   */
+  revokeException(id: string, at: string): Promise<void>;
 }
 
 export interface EventRepo {
+  /** Append with a caller-chosen seq; rejects a duplicate (runId, seq). */
   append(e: PlatformEvent): Promise<void>;
+  /** Append with the next seq for the run, allocated atomically across concurrent writers. */
+  appendNext(e: UnsequencedEvent): Promise<PlatformEvent>;
   listByRun(runId: string, afterSeq?: number): Promise<PlatformEvent[]>;
 }
 
@@ -89,5 +99,7 @@ export interface Store {
   decisions: DecisionRepo;
   /** Run fn in one transaction. */
   tx<T>(fn: (s: Store) => Promise<T>): Promise<T>;
+  /** Readiness probe: resolves when the backing store answers, rejects otherwise. */
+  ping(): Promise<void>;
   close(): Promise<void>;
 }

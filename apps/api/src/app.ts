@@ -13,6 +13,7 @@ import { projectRoutes } from "./routes/projects.js";
 import { runRoutes } from "./routes/runs.js";
 import { systemRoutes } from "./routes/system.js";
 import { type WebhookSecretResolver, webhookRoutes } from "./routes/webhooks.js";
+import { type SdapMetrics, createMetrics } from "./metrics.js";
 
 export interface BuildAppOptions {
   store: Store;
@@ -20,6 +21,10 @@ export interface BuildAppOptions {
   /** Defaults to the verifier described by `config` (OIDC, or dev tokens outside production). */
   auth?: AuthVerifier;
   config?: Partial<AppConfig>;
+  /** Metrics registry and handles; created by default if not passed. */
+  metrics?: SdapMetrics;
+  /** Optional bearer token for `/metrics`. */
+  metricsBearerToken?: string;
   /** Per-project webhook secret lookup; defaults to `config.webhookSecrets`. */
   webhookSecretResolver?: WebhookSecretResolver;
   /** Sink for the structured log (including audit lines); tests capture it. */
@@ -78,7 +83,13 @@ export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstanc
 
   app.addHook("onResponse", async (req, reply) => writeAuditLog(req, reply.statusCode));
 
-  await app.register(systemRoutes, { store: options.store });
+  const metrics = options.metrics ?? createMetrics();
+
+  await app.register(systemRoutes, {
+    store: options.store,
+    metrics,
+    metricsBearerToken: options.metricsBearerToken,
+  });
 
   await app.register(
     async (api) => {

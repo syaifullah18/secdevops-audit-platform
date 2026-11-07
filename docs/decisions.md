@@ -95,3 +95,15 @@ The maintainer reported Claude capacity is back. → Running Flash workers finis
 (restarting would discard work). New launches and relaunches follow the section B routing table.
 Claude-routed work runs as Orca-supervised `claude` workers, which appear in Orca's UI. WS8
 (security-critical) gets an Opus review-and-harden pass on its branch before merge.
+
+## D-015 Lead handoff from Claude to agy (Antigravity)
+
+Phase 1 closed under Claude Opus (`phase-1`, 555 tests green). The maintainer directed continuation and takeover from Claude to agy for Phase 2 integration and onward.
+→ `agy` (Gemini 3.8 Flash High / Gemini 4 Argon High) takes over as the Lead Orchestrator for Phase 2 integration, contract reconciliation, builds, and merges.
+Consequences:
+
+- Phase 2 WS2 contract requests applied cleanly across `@sdap/core`, `@sdap/api`, `@sdap/worker`, and `@sdap/web` (`webhookSecretRef`, `clientId` on Policy, `revokeException`, `appendNext`, `ping`).
+- `apps/worker` receives its production entrypoint `src/main.ts` with Prometheus metrics server, real adapter registry, and graceful signal handling.
+- Worker test fakes moved out of `src/` to `test/fakes.ts` to prevent production leakage.
+- Prometheus `/metrics` mounted in `apps/api` via `systemRoutes`.
+- All workspace packages build, typecheck, lint, and test 100% green under Node 24.

@@ -83,3 +83,8 @@ permission (`--mode auto` is unavailable on this account). → Each worker runs 
 process in its own worktree with `--settings` granting a scoped allowlist (pnpm, node, read-only
 shell tools, git add/commit/diff/log/status; docker/podman for WS8 only) and denying push, branch
 switching, reset/merge/rebase, network fetchers and sudo. Permissions are never bypassed wholesale.
+
+Update: file tools need a target rule. Globs (`/**`, `**`) do not match; a directory prefix does.
+Each worker gets its own settings file granting file tools only on its own worktree
+(`write_file(<worktree dir>)` and so on) and read access to its spec. Specs tell workers to run one
+command per call without `PATH=` prefixes; the runner exports Node 24 on PATH.

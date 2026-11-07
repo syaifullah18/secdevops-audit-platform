@@ -5,6 +5,9 @@
   "description": "sdap CLI for CI pipelines: trigger runs, wait, and fail on policy.",
   "license": "Apache-2.0",
   "type": "module",
+  "bin": {
+    "sdap": "./dist/bin/sdap.js"
+  },
   "exports": {
     ".": {
       "source": "./src/index.ts",
@@ -23,5 +26,8 @@
   },
   "dependencies": {
     "@sdap/core": "workspace:*"
+  },
+  "devDependencies": {
+    "yaml": "^2.7.0"
   }
 }

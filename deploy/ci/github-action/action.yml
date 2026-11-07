@@ -1,0 +1,48 @@
+name: "SDAP Security Audit Gate"
+description: "Triggers a focused SecDevOps Audit Platform audit and enforces gate policies in GitHub Actions"
+author: "SecDevOps Audit Platform"
+
+inputs:
+  api-url:
+    description: "SDAP API server base URL"
+    required: false
+    default: "https://sdap.internal.example.com"
+  token:
+    description: "SDAP API bearer token (read from GitHub Secrets)"
+    required: true
+  project:
+    description: "SDAP project UUID"
+    required: true
+  mode:
+    description: "Audit mode: focused, incremental, or full"
+    required: false
+    default: "focused"
+  ref:
+    description: "Git ref to audit"
+    required: false
+    default: ${{ github.sha }}
+  fail-on:
+    description: "Gate failure threshold (e.g. confirmed:high)"
+    required: false
+    default: "confirmed:high"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    - name: Install @sdap/cli
+      shell: bash
+      run: npm install -g @sdap/cli
+
+    - name: Execute SDAP Audit Gate
+      shell: bash
+      env:
+        SDAP_API_URL: ${{ inputs.api-url }}
+        SDAP_TOKEN: ${{ inputs.token }}
+        SDAP_PROJECT: ${{ inputs.project }}
+      run: |
+        sdap run --mode focused --wait --fail-on confirmed:high

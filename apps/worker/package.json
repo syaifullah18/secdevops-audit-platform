@@ -22,9 +22,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sdap/core": "workspace:*",
     "@sdap/adapters": "workspace:*",
+    "@sdap/core": "workspace:*",
     "@sdap/normalizer": "workspace:*",
-    "@sdap/sandbox": "workspace:*"
+    "@sdap/sandbox": "workspace:*",
+    "bullmq": "^6.7.1",
+    "ioredis": "^6.0.0",
+    "zod": "^4.6.7"
   }
 }

@@ -1,29 +1,81 @@
+import dns from "node:dns";
 import http from "node:http";
 import net from "node:net";
-import { URL } from "node:url";
+import {
+  addressPermitted,
+  canonicalIp,
+  matchAllowlist,
+  splitHostPort,
+  type AllowlistRule,
+} from "./egress-rules.js";
+import { parseEgressAllowlist } from "./validation.js";
+
+export type LookupFn = (hostname: string) => Promise<{ address: string; family: number }[]>;
 
 export interface EgressProxyOptions {
   allowlist: readonly string[];
+  /** Bind address. Defaults to 127.0.0.1; never bind 0.0.0.0 on a shared host. */
   host?: string;
   port?: number;
+  /** DNS resolver (injectable for tests). Defaults to dns.promises.lookup(all). */
+  lookup?: LookupFn;
+  /** Optional sink for allow/deny decisions. */
+  onDecision?: (d: { allowed: boolean; host: string; port: number; reason: string }) => void;
+}
+
+const HOP_BY_HOP = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "proxy-connection",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);
+
+const defaultLookup: LookupFn = (hostname) =>
+  dns.promises.lookup(hostname, { all: true, verbatim: true });
+
+interface Vetted {
+  ok: true;
+  address: string;
+}
+interface Denied {
+  ok: false;
+  status: number;
+  reason: string;
 }
 
 /**
- * Forward HTTP and HTTPS (CONNECT) proxy that strictly restricts outbound
- * egress to hosts specified in the allowlist.
+ * In-process forward HTTP + CONNECT proxy enforcing the egress allowlist.
+ *
+ * Security properties (mirrored by deploy/sandbox/egress-proxy/server.cjs):
+ * - Allowlist is parsed strictly (see egress-rules.ts); invalid entries throw.
+ * - Only absolute-form `http://` requests and `CONNECT host:port` are accepted.
+ * - The destination is resolved once, every resolved address is classified, and the
+ *   connection is pinned to the vetted address (no second lookup => no DNS rebinding
+ *   between check and connect).
+ * - Loopback / link-local / metadata addresses are never reachable via a hostname.
+ * - Hop-by-hop and Proxy-* headers are stripped before forwarding.
  */
 export class EgressProxy {
-  private readonly allowlist: string[];
+  private readonly rules: AllowlistRule[];
   private readonly host: string;
   private readonly preferredPort: number;
+  private readonly lookup: LookupFn;
+  private readonly onDecision?: EgressProxyOptions["onDecision"];
   private server: http.Server | null = null;
   private listeningPort: number | null = null;
   private readonly openSockets = new Set<net.Socket>();
 
   constructor(options: EgressProxyOptions) {
-    this.allowlist = (options.allowlist || []).map((h) => h.toLowerCase().trim());
-    this.host = options.host || "0.0.0.0";
+    this.rules = parseEgressAllowlist(options.allowlist ?? []);
+    this.host = options.host ?? "127.0.0.1";
     this.preferredPort = options.port ?? 0;
+    this.lookup = options.lookup ?? defaultLookup;
+    this.onDecision = options.onDecision;
   }
 
   get port(): number {
@@ -34,69 +86,49 @@ export class EgressProxy {
   }
 
   /**
-   * Checks whether a target host and port are permitted by the allowlist.
+   * Name-level allowlist check (no DNS). `targetHost` may be "host", "host:port" or
+   * "[v6]:port". Without a port, 443 is assumed.
    */
   isAllowed(targetHost: string, targetPort?: number | string): boolean {
-    if (this.allowlist.length === 0) {
+    try {
+      const { host, port } = splitHostPort(targetHost.trim());
+      const p = targetPort !== undefined ? Number(targetPort) : (port ?? 443);
+      if (!Number.isInteger(p)) return false;
+      return matchAllowlist(this.rules, host, p) !== null;
+    } catch {
       return false;
     }
-
-    // Parse host and optional port
-    let hostname = targetHost.toLowerCase().trim();
-    let portStr: string | undefined = targetPort !== undefined ? String(targetPort) : undefined;
-
-    if (hostname.includes("://")) {
-      try {
-        const u = new URL(hostname);
-        hostname = u.hostname.toLowerCase();
-        if (u.port) {
-          portStr = u.port;
-        } else {
-          portStr = u.protocol === "https:" ? "443" : "80";
-        }
-      } catch {
-        // If parsing fails, fall back to simple string splitting
-      }
-    }
-
-    if (hostname.includes(":") && !hostname.startsWith("[")) {
-      const lastColon = hostname.lastIndexOf(":");
-      portStr = hostname.slice(lastColon + 1);
-      hostname = hostname.slice(0, lastColon);
-    }
-
-    for (const rule of this.allowlist) {
-      let ruleHost = rule;
-      let rulePort: string | undefined;
-
-      if (rule.includes(":") && !rule.startsWith("[")) {
-        const lastColon = rule.lastIndexOf(":");
-        rulePort = rule.slice(lastColon + 1);
-        ruleHost = rule.slice(0, lastColon);
-      }
-
-      // Check port match if rule specifies a port
-      if (rulePort !== undefined && portStr !== undefined && rulePort !== portStr) {
-        continue;
-      }
-
-      // Check wildcard hostname: *.domain.com
-      if (ruleHost.startsWith("*.")) {
-        const domainSuffix = ruleHost.slice(2);
-        if (hostname.endsWith(`.${domainSuffix}`) || hostname === domainSuffix) {
-          return true;
-        }
-      } else if (ruleHost === "*" || ruleHost === hostname) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
-  /**
-   * Starts the forward proxy server.
-   */
+  /** Full check: allowlist match, then resolve and classify; returns the pinned address. */
+  async vet(host: string, port: number): Promise<Vetted | Denied> {
+    const rule = matchAllowlist(this.rules, host, port);
+    if (!rule) {
+      return { ok: false, status: 403, reason: "destination not in allowlist" };
+    }
+    let addresses: string[];
+    if (net.isIP(host) !== 0) {
+      addresses = [canonicalIp(host)];
+    } else {
+      try {
+        addresses = (await this.lookup(host)).map((a) => a.address);
+      } catch {
+        return { ok: false, status: 502, reason: "DNS resolution failed" };
+      }
+    }
+    if (addresses.length === 0) {
+      return { ok: false, status: 502, reason: "DNS resolution returned no addresses" };
+    }
+    // Every address must be permitted; otherwise an attacker-influenced record set could
+    // mix a public and an internal address.
+    for (const a of addresses) {
+      if (!addressPermitted(rule, a)) {
+        return { ok: false, status: 403, reason: `resolved address ${a} is not permitted` };
+      }
+    }
+    return { ok: true, address: addresses[0] as string };
+  }
+
   async start(): Promise<{ host: string; port: number }> {
     if (this.server) {
       return { host: this.host, port: this.port };
@@ -104,24 +136,19 @@ export class EgressProxy {
 
     return new Promise((resolve, reject) => {
       const server = http.createServer((req, res) => {
-        this.handleHttpRequest(req, res);
+        void this.handleHttpRequest(req, res);
       });
-
       server.on("connect", (req, clientSocket, head) => {
-        this.handleConnect(req, clientSocket as net.Socket, head);
+        void this.handleConnect(req, clientSocket as net.Socket, head);
       });
-
-      server.on("connection", (socket) => {
+      server.on("connection", (socket: net.Socket) => {
         this.openSockets.add(socket);
-        socket.on("close", () => {
-          this.openSockets.delete(socket);
-        });
+        socket.on("close", () => this.openSockets.delete(socket));
       });
-
-      server.on("error", (err) => {
-        reject(err);
+      server.on("clientError", (_err, socket) => {
+        socket.destroy();
       });
-
+      server.once("error", reject);
       server.listen(this.preferredPort, this.host, () => {
         const addr = server.address();
         if (addr && typeof addr === "object") {
@@ -135,120 +162,108 @@ export class EgressProxy {
     });
   }
 
-  /**
-   * Handles plain HTTP forwarding.
-   */
-  private handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    const rawUrl = req.url || "";
-    const hostHeader = req.headers.host || "";
+  private decide(allowed: boolean, host: string, port: number, reason: string): void {
+    this.onDecision?.({ allowed, host, port, reason });
+  }
 
-    let targetHost = hostHeader;
-    let targetPort = 80;
-    let targetPath = rawUrl;
-
-    if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
-      try {
-        const parsed = new URL(rawUrl);
-        targetHost = parsed.hostname;
-        targetPort = parsed.port
-          ? parseInt(parsed.port, 10)
-          : parsed.protocol === "https:"
-            ? 443
-            : 80;
-        targetPath = parsed.pathname + parsed.search;
-      } catch {
-        res.writeHead(400, { "Content-Type": "text/plain" });
-        res.end("Invalid URL in request\n");
-        return;
-      }
-    } else if (hostHeader) {
-      if (hostHeader.includes(":")) {
-        const lastColon = hostHeader.lastIndexOf(":");
-        targetHost = hostHeader.slice(0, lastColon);
-        const parsedPort = parseInt(hostHeader.slice(lastColon + 1), 10);
-        if (!isNaN(parsedPort)) {
-          targetPort = parsedPort;
-        }
-      } else {
-        targetHost = hostHeader;
-      }
-    }
-
-    if (!this.isAllowed(targetHost, targetPort)) {
-      res.writeHead(403, { "Content-Type": "text/plain" });
-      res.end(
-        `Blocked by SDAP Egress Policy: host ${targetHost}:${targetPort} is not in allowlist\n`,
-      );
+  private async handleHttpRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
+    const rawUrl = req.url ?? "";
+    let target: URL;
+    try {
+      // Absolute-form only; origin-form requests mean someone is talking to the proxy
+      // as if it were an origin server, which we refuse.
+      if (!rawUrl.startsWith("http://")) throw new Error("not absolute http");
+      target = new URL(rawUrl);
+      if (target.username || target.password) throw new Error("userinfo");
+    } catch {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Bad request: only absolute-form http:// URLs or CONNECT are accepted\n");
       return;
     }
 
-    const forwardHost =
-      targetHost.toLowerCase() === "host.docker.internal" ||
-      targetHost.toLowerCase() === "host.containers.internal"
-        ? "127.0.0.1"
-        : targetHost;
+    const host = target.hostname.startsWith("[") ? target.hostname.slice(1, -1) : target.hostname;
+    const port = target.port ? Number(target.port) : 80;
+    const verdict = await this.vet(host, port);
+    if (!verdict.ok) {
+      this.decide(false, host, port, verdict.reason);
+      res.writeHead(verdict.status, { "Content-Type": "text/plain" });
+      res.end(`Blocked by SDAP egress policy: ${host}:${port} (${verdict.reason})\n`);
+      return;
+    }
+    this.decide(true, host, port, "allowed");
+
+    const headers: http.OutgoingHttpHeaders = {};
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (!HOP_BY_HOP.has(k.toLowerCase()) && v !== undefined) headers[k] = v;
+    }
+    headers.host = target.host;
 
     const proxyReq = http.request(
       {
-        host: forwardHost,
-        port: targetPort,
+        host: verdict.address,
+        port,
         method: req.method,
-        path: targetPath,
-        headers: req.headers,
+        path: target.pathname + target.search,
+        // host is the pinned IP literal, so no second DNS lookup happens.
+        headers,
       },
       (proxyRes) => {
-        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        const outHeaders: http.OutgoingHttpHeaders = {};
+        for (const [k, v] of Object.entries(proxyRes.headers)) {
+          if (!HOP_BY_HOP.has(k.toLowerCase()) && v !== undefined) outHeaders[k] = v;
+        }
+        res.writeHead(proxyRes.statusCode ?? 502, outHeaders);
         proxyRes.pipe(res);
       },
     );
-
     proxyReq.on("error", (err) => {
       if (!res.headersSent) {
         res.writeHead(502, { "Content-Type": "text/plain" });
       }
       res.end(`Proxy error: ${err.message}\n`);
     });
-
     req.pipe(proxyReq);
   }
 
-  /**
-   * Handles HTTPS CONNECT tunneling.
-   */
-  private handleConnect(req: http.IncomingMessage, clientSocket: net.Socket, head: Buffer): void {
-    const url = req.url || "";
-    let hostname: string;
-    let port = 443;
-
-    if (url.includes(":")) {
-      const lastColon = url.lastIndexOf(":");
-      hostname = url.slice(0, lastColon);
-      const parsedPort = parseInt(url.slice(lastColon + 1), 10);
-      if (!isNaN(parsedPort)) {
-        port = parsedPort;
-      }
-    } else {
-      hostname = url;
-    }
-
-    if (!this.isAllowed(hostname, port)) {
-      clientSocket.write(
-        "HTTP/1.1 403 Forbidden\r\n" +
-          "Content-Type: text/plain\r\n" +
-          "Connection: close\r\n\r\n" +
-          `Blocked by SDAP Egress Policy: ${hostname}:${port} is not in allowlist\r\n`,
+  private async handleConnect(
+    req: http.IncomingMessage,
+    clientSocket: net.Socket,
+    head: Buffer,
+  ): Promise<void> {
+    const deny = (status: number, text: string, msg: string) => {
+      clientSocket.end(
+        `HTTP/1.1 ${status} ${text}\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n` +
+          `Blocked by SDAP egress policy: ${msg}\r\n`,
       );
-      clientSocket.destroy();
+    };
+    clientSocket.on("error", () => clientSocket.destroy());
+
+    let host: string;
+    let port: number;
+    try {
+      const parsed = splitHostPort(req.url ?? "");
+      if (parsed.port === null || parsed.host === "") throw new Error("missing port");
+      host = parsed.host;
+      port = parsed.port;
+    } catch {
+      deny(400, "Bad Request", "CONNECT target must be host:port");
       return;
     }
 
-    const forwardHost =
-      hostname.toLowerCase() === "host.docker.internal" ||
-      hostname.toLowerCase() === "host.containers.internal"
-        ? "127.0.0.1"
-        : hostname;
+    const verdict = await this.vet(host, port);
+    if (!verdict.ok) {
+      this.decide(false, host, port, verdict.reason);
+      deny(verdict.status, verdict.status === 403 ? "Forbidden" : "Bad Gateway", verdict.reason);
+      return;
+    }
+    this.decide(true, host, port, "allowed");
 
-    const targetSocket = net.connect(port, forwardHost, () => {
+    let connected = false;
+    const targetSocket = net.connect(port, verdict.address, () => {
+      connected = true;
       clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
       if (head && head.length > 0) {
         targetSocket.write(head);
@@ -256,24 +271,18 @@ export class EgressProxy {
       clientSocket.pipe(targetSocket);
       targetSocket.pipe(clientSocket);
     });
-
     this.openSockets.add(targetSocket);
-
     targetSocket.on("close", () => {
       this.openSockets.delete(targetSocket);
       clientSocket.destroy();
     });
-
-    clientSocket.on("close", () => {
-      targetSocket.destroy();
-    });
-
+    clientSocket.on("close", () => targetSocket.destroy());
     targetSocket.on("error", () => {
-      clientSocket.destroy();
-    });
-
-    clientSocket.on("error", () => {
-      targetSocket.destroy();
+      if (!connected && !clientSocket.destroyed && clientSocket.writable) {
+        deny(502, "Bad Gateway", "upstream connection failed");
+      } else {
+        clientSocket.destroy();
+      }
     });
   }
 
@@ -287,9 +296,8 @@ export class EgressProxy {
     this.openSockets.clear();
 
     if (this.server) {
-      await new Promise<void>((resolve) => {
-        this.server?.close(() => resolve());
-      });
+      const server = this.server;
+      await new Promise<void>((resolve) => server.close(() => resolve()));
       this.server = null;
       this.listeningPort = null;
     }

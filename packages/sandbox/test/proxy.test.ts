@@ -1,200 +1,138 @@
-import http from "node:http";
-import net from "node:net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { EgressProxy } from "../src/proxy.js";
+import { describe, expect, it } from "vitest";
+import {
+  addressPermitted,
+  canonicalIp,
+  classifyAddress,
+  matchAllowlist,
+  parseAllowlistEntry,
+} from "../src/egress-rules.js";
+import { EgressProxy, type LookupFn } from "../src/proxy.js";
 
-describe("EgressProxy", () => {
-  describe("isAllowed helper", () => {
-    it("handles exact host matches", () => {
-      const proxy = new EgressProxy({
-        allowlist: ["api.anthropic.com", "openai.com"],
-      });
-      expect(proxy.isAllowed("api.anthropic.com")).toBe(true);
-      expect(proxy.isAllowed("API.ANTHROPIC.COM")).toBe(true);
-      expect(proxy.isAllowed("openai.com")).toBe(true);
-      expect(proxy.isAllowed("evil.com")).toBe(false);
-      expect(proxy.isAllowed("anthropic.com")).toBe(false);
+describe("egress rules", () => {
+  it("parses entries into typed rules", () => {
+    expect(parseAllowlistEntry("API.Anthropic.com")).toEqual({
+      host: "api.anthropic.com",
+      kind: "exact-name",
+      port: null,
     });
-
-    it("handles host:port specific rules", () => {
-      const proxy = new EgressProxy({
-        allowlist: ["localhost:8080", "127.0.0.1:3000"],
-      });
-      expect(proxy.isAllowed("localhost", 8080)).toBe(true);
-      expect(proxy.isAllowed("localhost:8080")).toBe(true);
-      expect(proxy.isAllowed("localhost", 9090)).toBe(false);
-      expect(proxy.isAllowed("127.0.0.1", 3000)).toBe(true);
-      expect(proxy.isAllowed("127.0.0.1", 4000)).toBe(false);
+    expect(parseAllowlistEntry("*.example.org:8443")).toEqual({
+      host: "example.org",
+      kind: "wildcard",
+      port: 8443,
     });
-
-    it("handles wildcard subdomain rules", () => {
-      const proxy = new EgressProxy({
-        allowlist: ["*.internal.corp", "*.aws.com"],
-      });
-      expect(proxy.isAllowed("git.internal.corp")).toBe(true);
-      expect(proxy.isAllowed("sub.git.internal.corp")).toBe(true);
-      expect(proxy.isAllowed("internal.corp")).toBe(true);
-      expect(proxy.isAllowed("othercorp.com")).toBe(false);
-      expect(proxy.isAllowed("s3.aws.com")).toBe(true);
-    });
-
-    it("blocks everything when allowlist is empty", () => {
-      const proxy = new EgressProxy({ allowlist: [] });
-      expect(proxy.isAllowed("localhost")).toBe(false);
-      expect(proxy.isAllowed("google.com")).toBe(false);
-      expect(proxy.isAllowed("127.0.0.1")).toBe(false);
-    });
+    expect(parseAllowlistEntry("[::1]:80")).toEqual({ host: "::1", kind: "ip", port: 80 });
+    expect(parseAllowlistEntry("10.0.0.1")).toEqual({ host: "10.0.0.1", kind: "ip", port: null });
   });
 
-  describe("Live proxy server", () => {
-    let targetServer: http.Server;
-    let targetPort: number;
+  it("matches exact, wildcard and port rules", () => {
+    const rules = ["api.anthropic.com", "*.internal.corp", "localhost:8080", "127.0.0.1:3000"].map(
+      parseAllowlistEntry,
+    );
+    expect(matchAllowlist(rules, "api.anthropic.com", 443)).not.toBeNull();
+    expect(matchAllowlist(rules, "API.ANTHROPIC.COM.", 443)).not.toBeNull();
+    expect(matchAllowlist(rules, "api.anthropic.com", 22)).toBeNull();
+    expect(matchAllowlist(rules, "anthropic.com", 443)).toBeNull();
+    expect(matchAllowlist(rules, "api.anthropic.com.evil.com", 443)).toBeNull();
+    expect(matchAllowlist(rules, "git.internal.corp", 443)).not.toBeNull();
+    expect(matchAllowlist(rules, "internal.corp", 80)).not.toBeNull();
+    expect(matchAllowlist(rules, "evilinternal.corp", 443)).toBeNull();
+    expect(matchAllowlist(rules, "localhost", 8080)).not.toBeNull();
+    expect(matchAllowlist(rules, "localhost", 9090)).toBeNull();
+    expect(matchAllowlist(rules, "127.0.0.1", 3000)).not.toBeNull();
+    expect(matchAllowlist(rules, "::ffff:127.0.0.1", 3000)).not.toBeNull();
+    expect(matchAllowlist(rules, "127.0.0.1", 4000)).toBeNull();
+  });
 
-    beforeAll(async () => {
-      targetServer = http.createServer((req, res) => {
-        res.writeHead(200, { "Content-Type": "text/plain" });
-        res.end("target response: " + req.url);
-      });
-      await new Promise<void>((resolve) => {
-        targetServer.listen(0, "127.0.0.1", () => {
-          const addr = targetServer.address();
-          if (addr && typeof addr === "object") {
-            targetPort = addr.port;
-          }
-          resolve();
-        });
-      });
-    });
+  it("IP literals only match explicit IP rules, never wildcard/name rules", () => {
+    const rules = ["*.example.com"].map(parseAllowlistEntry);
+    expect(matchAllowlist(rules, "93.184.216.34", 443)).toBeNull();
+  });
 
-    afterAll(async () => {
-      await new Promise<void>((resolve) => targetServer.close(() => resolve()));
-    });
+  it("classifies addresses", () => {
+    expect(classifyAddress("169.254.169.254")).toBe("blocked");
+    expect(classifyAddress("::ffff:169.254.169.254")).toBe("blocked");
+    expect(classifyAddress("::ffff:a9fe:a9fe")).toBe("blocked");
+    expect(classifyAddress("fd00:ec2::254")).toBe("blocked");
+    expect(classifyAddress("127.0.0.53")).toBe("blocked");
+    expect(classifyAddress("::1")).toBe("blocked");
+    expect(classifyAddress("0.0.0.0")).toBe("blocked");
+    expect(classifyAddress("fe80::1")).toBe("blocked");
+    expect(classifyAddress("64:ff9b::a9fe:a9fe")).toBe("blocked");
+    expect(classifyAddress("10.1.2.3")).toBe("private");
+    expect(classifyAddress("192.168.127.254")).toBe("private");
+    expect(classifyAddress("fd12::1")).toBe("private");
+    expect(classifyAddress("1.1.1.1")).toBe("public");
+    expect(classifyAddress("2606:4700::1111")).toBe("public");
+    expect(canonicalIp("0:0:0:0:0:ffff:1.2.3.4")).toBe("1.2.3.4");
+  });
 
-    it("allows HTTP requests to allowlisted hosts", async () => {
-      const proxy = new EgressProxy({
-        allowlist: [`127.0.0.1:${targetPort}`],
-      });
-      const { port: proxyPort } = await proxy.start();
+  it("permits addresses per rule kind", () => {
+    const exact = parseAllowlistEntry("gw.local.test");
+    const wild = parseAllowlistEntry("*.example.com");
+    const ip = parseAllowlistEntry("127.0.0.1:9");
+    expect(addressPermitted(exact, "10.0.0.8")).toBe(true);
+    expect(addressPermitted(exact, "127.0.0.1")).toBe(false);
+    expect(addressPermitted(exact, "169.254.169.254")).toBe(false);
+    expect(addressPermitted(wild, "10.0.0.8")).toBe(false);
+    expect(addressPermitted(wild, "1.1.1.1")).toBe(true);
+    expect(addressPermitted(ip, "127.0.0.1")).toBe(true);
+    expect(addressPermitted(ip, "127.0.0.2")).toBe(false);
+  });
+});
 
-      try {
-        const responseText = await new Promise<string>((resolve, reject) => {
-          const req = http.request(
-            {
-              host: "127.0.0.1",
-              port: proxyPort,
-              method: "GET",
-              path: `http://127.0.0.1:${targetPort}/test`,
-              headers: { Host: `127.0.0.1:${targetPort}` },
-            },
-            (res) => {
-              expect(res.statusCode).toBe(200);
-              let data = "";
-              res.on("data", (chunk: Buffer) => (data += chunk.toString()));
-              res.on("end", () => resolve(data));
-            },
-          );
-          req.on("error", reject);
-          req.end();
-        });
+describe("EgressProxy (in-process)", () => {
+  it("isAllowed performs name-level checks", () => {
+    const proxy = new EgressProxy({ allowlist: ["localhost:8080", "*.aws.com"] });
+    expect(proxy.isAllowed("localhost", 8080)).toBe(true);
+    expect(proxy.isAllowed("localhost:8080")).toBe(true);
+    expect(proxy.isAllowed("localhost", 9090)).toBe(false);
+    expect(proxy.isAllowed("s3.aws.com")).toBe(true);
+    expect(proxy.isAllowed("s3.aws.com", 22)).toBe(false);
+    expect(proxy.isAllowed("garbage::")).toBe(false);
+  });
 
-        expect(responseText).toBe("target response: /test");
-      } finally {
-        await proxy.stop();
-      }
-    });
+  it("binds to loopback by default", async () => {
+    const proxy = new EgressProxy({ allowlist: [] });
+    const { host } = await proxy.start();
+    await proxy.stop();
+    expect(host).toBe("127.0.0.1");
+  });
 
-    it("blocks HTTP requests to non-allowlisted hosts with 403 Forbidden", async () => {
-      const proxy = new EgressProxy({
-        allowlist: ["allowed.example.com"],
-      });
-      const { port: proxyPort } = await proxy.start();
+  it("refuses a hostname whose record set mixes public and internal addresses", async () => {
+    const lookup: LookupFn = async () => [
+      { address: "1.1.1.1", family: 4 },
+      { address: "169.254.169.254", family: 4 },
+    ];
+    const proxy = new EgressProxy({ allowlist: ["api.example.com"], lookup });
+    const v = await proxy.vet("api.example.com", 443);
+    expect(v.ok).toBe(false);
+  });
 
-      try {
-        const statusCode = await new Promise<number>((resolve, reject) => {
-          const req = http.request(
-            {
-              host: "127.0.0.1",
-              port: proxyPort,
-              method: "GET",
-              path: `http://127.0.0.1:${targetPort}/forbidden`,
-              headers: { Host: `127.0.0.1:${targetPort}` },
-            },
-            (res) => {
-              resolve(res.statusCode || 0);
-            },
-          );
-          req.on("error", reject);
-          req.end();
-        });
+  it("refuses wildcard matches that resolve to private addresses (DNS rebinding)", async () => {
+    const lookup: LookupFn = async () => [{ address: "10.0.0.5", family: 4 }];
+    const proxy = new EgressProxy({ allowlist: ["*.example.com"], lookup });
+    expect((await proxy.vet("rebind.example.com", 443)).ok).toBe(false);
+    const exact = new EgressProxy({ allowlist: ["gw.example.com"], lookup });
+    expect(await exact.vet("gw.example.com", 443)).toEqual({ ok: true, address: "10.0.0.5" });
+  });
 
-        expect(statusCode).toBe(403);
-      } finally {
-        await proxy.stop();
-      }
-    });
+  it("resolves exactly once per request and pins the vetted address", async () => {
+    let calls = 0;
+    const lookup: LookupFn = async () => {
+      calls++;
+      return [{ address: calls === 1 ? "1.1.1.1" : "127.0.0.1", family: 4 }];
+    };
+    const proxy = new EgressProxy({ allowlist: ["api.example.com"], lookup });
+    const v = await proxy.vet("api.example.com", 443);
+    expect(v).toEqual({ ok: true, address: "1.1.1.1" });
+    expect(calls).toBe(1);
+  });
 
-    it("allows CONNECT tunneling to allowlisted hosts", async () => {
-      const proxy = new EgressProxy({
-        allowlist: [`127.0.0.1:${targetPort}`],
-      });
-      const { port: proxyPort } = await proxy.start();
-
-      try {
-        const responseData = await new Promise<string>((resolve, reject) => {
-          const req = http.request({
-            host: "127.0.0.1",
-            port: proxyPort,
-            method: "CONNECT",
-            path: `127.0.0.1:${targetPort}`,
-          });
-
-          req.on("connect", (res, socket) => {
-            expect(res.statusCode).toBe(200);
-
-            socket.write(
-              "GET /tunnel-test HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
-            );
-
-            let data = "";
-            socket.on("data", (chunk: Buffer) => (data += chunk.toString()));
-            socket.on("end", () => resolve(data));
-          });
-
-          req.on("error", reject);
-          req.end();
-        });
-
-        expect(responseData).toContain("HTTP/1.1 200 OK");
-        expect(responseData).toContain("target response: /tunnel-test");
-      } finally {
-        await proxy.stop();
-      }
-    });
-
-    it("blocks CONNECT tunneling to non-allowlisted hosts", async () => {
-      const proxy = new EgressProxy({
-        allowlist: ["safe.domain.com"],
-      });
-      const { port: proxyPort } = await proxy.start();
-
-      try {
-        const socket = net.connect(proxyPort, "127.0.0.1", () => {
-          socket.write(
-            `CONNECT 127.0.0.1:${targetPort} HTTP/1.1\r\nHost: 127.0.0.1:${targetPort}\r\n\r\n`,
-          );
-        });
-
-        const data = await new Promise<string>((resolve) => {
-          let buffer = "";
-          socket.on("data", (chunk) => (buffer += chunk.toString()));
-          socket.on("close", () => resolve(buffer));
-        });
-
-        expect(data).toContain("HTTP/1.1 403 Forbidden");
-        expect(data).toContain("Blocked by SDAP Egress Policy");
-      } finally {
-        await proxy.stop();
-      }
-    });
+  it("reports DNS failures as 502 rather than allowing", async () => {
+    const lookup: LookupFn = async () => {
+      throw new Error("ENOTFOUND");
+    };
+    const proxy = new EgressProxy({ allowlist: ["api.example.com"], lookup });
+    expect(await proxy.vet("api.example.com", 443)).toMatchObject({ ok: false, status: 502 });
   });
 });

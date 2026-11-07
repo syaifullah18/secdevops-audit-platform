@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "egressAllowlist": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "env": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "cpus": {
+      "default": 2,
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "memoryMb": {
+      "default": 4096,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "timeoutSec": {
+      "default": 3600,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "targetDir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "outputDir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readOnlyMounts": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hostPath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "containerPath": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["hostPath", "containerPath"]
+      }
+    }
+  },
+  "required": ["targetDir", "outputDir"]
+}

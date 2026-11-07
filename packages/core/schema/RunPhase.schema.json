@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "runId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "name": {
+      "type": "string",
+      "enum": [
+        "preflight",
+        "recon",
+        "hunt",
+        "triage",
+        "validate",
+        "output",
+        "record_verify",
+        "report"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "succeeded", "failed", "skipped"]
+    },
+    "startedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "endedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sliceCount": {
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "slicesDone": {
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "inputTokens": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "outputTokens": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "costUsd": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "required": ["runId", "name", "status", "startedAt", "endedAt", "usage"]
+}

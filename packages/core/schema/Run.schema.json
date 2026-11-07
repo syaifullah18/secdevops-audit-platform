@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "projectId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["focused", "incremental", "full"]
+    },
+    "repeat": {
+      "default": 1,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "trigger": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["manual", "api", "ci", "schedule", "release_tag", "webhook"]
+        },
+        "actor": {
+          "type": ["string", "null"]
+        },
+        "ref": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["kind", "actor", "ref"]
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commitSha": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "baseCommitSha": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "previousRunId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "attackClasses": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9_.:/-]*$"
+          }
+        },
+        "maxRuntimeSec": {
+          "default": 14400,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tokenBudget": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+    },
+    "phases": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "preflight",
+              "recon",
+              "hunt",
+              "triage",
+              "validate",
+              "output",
+              "record_verify",
+              "report"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "succeeded", "failed", "skipped"]
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sliceCount": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "slicesDone": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "inputTokens": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outputTokens": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "costUsd": {
+                "default": 0,
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "required": ["runId", "name", "status", "startedAt", "endedAt", "usage"]
+      }
+    },
+    "validators": {
+      "type": "object",
+      "properties": {
+        "findings": {
+          "type": "string",
+          "enum": ["pending", "passed", "failed"]
+        },
+        "coverageLedger": {
+          "type": "string",
+          "enum": ["pending", "passed", "failed"]
+        }
+      },
+      "required": ["findings", "coverageLedger"]
+    },
+    "skillVersion": {
+      "type": "string",
+      "minLength": 7
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "inputTokens": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "outputTokens": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "costUsd": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "findingsJson": {
+          "type": ["string", "null"]
+        },
+        "coverageLedgerJson": {
+          "type": ["string", "null"]
+        },
+        "architectureMd": {
+          "type": ["string", "null"]
+        },
+        "reportMd": {
+          "type": ["string", "null"]
+        },
+        "findingsDetailMd": {
+          "type": ["string", "null"]
+        },
+        "needsValidationMd": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "findingsJson",
+        "coverageLedgerJson",
+        "architectureMd",
+        "reportMd",
+        "findingsDetailMd",
+        "needsValidationMd"
+      ]
+    },
+    "failureReason": {
+      "type": ["string", "null"]
+    },
+    "retries": {
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "startedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "endedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "projectId",
+    "mode",
+    "trigger",
+    "ref",
+    "commitSha",
+    "baseCommitSha",
+    "previousRunId",
+    "scope",
+    "status",
+    "validators",
+    "skillVersion",
+    "usage",
+    "artifacts",
+    "failureReason",
+    "createdAt",
+    "startedAt",
+    "endedAt"
+  ]
+}

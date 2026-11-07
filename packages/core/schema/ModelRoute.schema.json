@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "task": {
+      "type": "string",
+      "enum": ["recon", "hunt", "validate", "record_verify", "report", "fix_draft", "decide"]
+    },
+    "primary": {
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["adapter", "model"]
+    },
+    "fallbacks": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "adapter": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["adapter", "model"]
+      }
+    },
+    "requireDifferentFamilyFrom": {
+      "type": "string",
+      "enum": ["recon", "hunt", "validate", "record_verify", "report", "fix_draft", "decide"]
+    }
+  },
+  "required": ["task", "primary"]
+}

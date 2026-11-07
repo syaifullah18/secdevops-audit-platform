@@ -233,9 +233,16 @@
           "index": 0,
           "value": 2114060288,
           "valueTwo": 0,
-          "op": "SCMP_CMP_MASKED_EQUAL"
+          "op": "SCMP_CMP_MASKED_EQ"
         }
       ]
+    },
+    {
+      "names": ["clone3"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 38,
+      "comment": "ENOSYS so libc falls back to clone(2), whose namespace flags are filtered above"
     }
-  ]
+  ],
+  "defaultErrnoRet": 1
 }

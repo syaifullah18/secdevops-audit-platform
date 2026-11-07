@@ -257,7 +257,11 @@ export class MockDataStore {
     }
   }
 
-  getFindings(query?: FindingQuery): { items: Finding[]; total: number; nextCursor: string | null } {
+  getFindings(query?: FindingQuery): {
+    items: Finding[];
+    total: number;
+    nextCursor: string | null;
+  } {
     let result = [...this.findings];
 
     // Filter rejected findings by default unless includeRejected is true
@@ -292,7 +296,7 @@ export class MockDataStore {
       );
     }
 
-    const limit = query?.limit ?? 50;
+    const limit = typeof query?.limit === "number" ? query.limit : 50;
     const items = result.slice(0, limit);
     return {
       items,
@@ -359,7 +363,7 @@ export class MockDataStore {
         kind: "accepted_risk",
         reason: req.reason || "Accepted risk via triage dashboard",
         approver: "current-user@acme-corp.example",
-        expiresAt: req.expiresAt,
+        expiresAt: req.expiresAt ?? null,
         createdAt: now,
       };
       this.exceptions.push(newExc);
@@ -398,7 +402,8 @@ export class MockDataStore {
 
   getGateResult(projectId: string): ReturnType<typeof evaluateGate> {
     const project = this.getProject(projectId);
-    const policy = this.policies.find((p) => p.id === project?.policyId) || this.policies[0];
+    const policy = this.policies.find((p) => p.id === project?.policyId) ||
+      this.policies[0] || { mode: "enforce" as const, rules: [] };
     const projectFindings = this.findings.filter((f) => f.projectId === projectId);
     const projectExceptions = this.exceptions.filter((e) => e.projectId === projectId);
     return evaluateGate(policy, projectFindings, projectExceptions);
@@ -486,7 +491,8 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlString = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const urlString =
+      typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(urlString, "http://localhost:8080");
 
     if (!url.pathname.startsWith("/api/v1/")) {
@@ -520,10 +526,11 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /projects/:id
       const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
-      if (projectMatch && method === "GET") {
+      if (projectMatch && projectMatch[1] && method === "GET") {
         const id = projectMatch[1];
         const proj = store.getProject(id);
-        if (!proj) return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+        if (!proj)
+          return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
         return new Response(JSON.stringify(proj), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -532,7 +539,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /projects/:id/runs
       const projectRunsMatch = pathname.match(/^\/projects\/([^/]+)\/runs$/);
-      if (projectRunsMatch && method === "GET") {
+      if (projectRunsMatch && projectRunsMatch[1] && method === "GET") {
         const projectId = projectRunsMatch[1];
         const runs = store.getRuns(projectId);
         return new Response(JSON.stringify({ items: runs, total: runs.length, nextCursor: null }), {
@@ -543,7 +550,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /projects/:id/gate
       const projectGateMatch = pathname.match(/^\/projects\/([^/]+)\/gate$/);
-      if (projectGateMatch && method === "GET") {
+      if (projectGateMatch && projectGateMatch[1] && method === "GET") {
         const projectId = projectGateMatch[1];
         const gate = store.getGateResult(projectId);
         return new Response(JSON.stringify(gate), {
@@ -554,7 +561,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /projects/:id/coverage
       const projectCovMatch = pathname.match(/^\/projects\/([^/]+)\/coverage$/);
-      if (projectCovMatch && method === "GET") {
+      if (projectCovMatch && projectCovMatch[1] && method === "GET") {
         const projectId = projectCovMatch[1];
         const cov = store.getCoverageSummary(projectId);
         return new Response(JSON.stringify(cov), {
@@ -584,7 +591,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /runs/:id
       const runMatch = pathname.match(/^\/runs\/([^/]+)$/);
-      if (runMatch && method === "GET") {
+      if (runMatch && runMatch[1] && method === "GET") {
         const id = runMatch[1];
         const run = store.getRun(id);
         if (!run) return new Response(JSON.stringify({ error: "Run not found" }), { status: 404 });
@@ -596,7 +603,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // POST /runs/:id/cancel
       const runCancelMatch = pathname.match(/^\/runs\/([^/]+)\/cancel$/);
-      if (runCancelMatch && method === "POST") {
+      if (runCancelMatch && runCancelMatch[1] && method === "POST") {
         const id = runCancelMatch[1];
         const ok = store.cancelRun(id);
         return new Response(JSON.stringify({ success: ok }), {
@@ -607,7 +614,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /runs/:id/slices
       const runSlicesMatch = pathname.match(/^\/runs\/([^/]+)\/slices$/);
-      if (runSlicesMatch && method === "GET") {
+      if (runSlicesMatch && runSlicesMatch[1] && method === "GET") {
         const id = runSlicesMatch[1];
         const slices = store.getRunSlices(id);
         return new Response(JSON.stringify(slices), {
@@ -618,7 +625,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /runs/:id/events
       const runEventsMatch = pathname.match(/^\/runs\/([^/]+)\/events$/);
-      if (runEventsMatch && method === "GET") {
+      if (runEventsMatch && runEventsMatch[1] && method === "GET") {
         const id = runEventsMatch[1];
         const events = store.getRunEvents(id);
         return new Response(JSON.stringify(events), {
@@ -643,10 +650,11 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /findings/:id
       const findingMatch = pathname.match(/^\/findings\/([^/]+)$/);
-      if (findingMatch && method === "GET") {
+      if (findingMatch && findingMatch[1] && method === "GET") {
         const id = findingMatch[1];
         const f = store.getFinding(id);
-        if (!f) return new Response(JSON.stringify({ error: "Finding not found" }), { status: 404 });
+        if (!f)
+          return new Response(JSON.stringify({ error: "Finding not found" }), { status: 404 });
         return new Response(JSON.stringify(f), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -655,7 +663,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /findings/:id/history
       const findingHistoryMatch = pathname.match(/^\/findings\/([^/]+)\/history$/);
-      if (findingHistoryMatch && method === "GET") {
+      if (findingHistoryMatch && findingHistoryMatch[1] && method === "GET") {
         const id = findingHistoryMatch[1];
         const history = store.getFindingHistory(id);
         return new Response(JSON.stringify(history), {
@@ -666,7 +674,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // POST /findings/:id/triage
       const findingTriageMatch = pathname.match(/^\/findings\/([^/]+)\/triage$/);
-      if (findingTriageMatch && method === "POST") {
+      if (findingTriageMatch && findingTriageMatch[1] && method === "POST") {
         const id = findingTriageMatch[1];
         const body = init?.body ? JSON.parse(init.body as string) : {};
         const { finding } = store.triageFinding(id, body);
@@ -687,7 +695,7 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
 
       // GET /policies/:id
       const policyMatch = pathname.match(/^\/policies\/([^/]+)$/);
-      if (policyMatch && method === "GET") {
+      if (policyMatch && policyMatch[1] && method === "GET") {
         const id = policyMatch[1];
         const p = store.getPolicy(id);
         if (!p) return new Response(JSON.stringify({ error: "Policy not found" }), { status: 404 });

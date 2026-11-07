@@ -23,7 +23,7 @@ describe("Typed API client against mock API", () => {
   it("fetches projects and validates with Project schema", async () => {
     const projects = await api.getProjects();
     expect(projects.length).toBeGreaterThan(0);
-    expect(projects[0].slug).toBe("auth-gateway");
+    expect(projects[0]!.slug).toBe("auth-gateway");
   });
 
   it("fetches single project", async () => {
@@ -35,7 +35,7 @@ describe("Typed API client against mock API", () => {
   it("fetches runs and validates RunPage", async () => {
     const runPage = await api.getRuns(FIXTURE_PROJECT_1_ID);
     expect(runPage.items.length).toBeGreaterThan(0);
-    expect(runPage.items[0].id).toBe(FIXTURE_RUN_1_ID);
+    expect(runPage.items[0]!.id).toBe(FIXTURE_RUN_1_ID);
   });
 
   it("fetches single run and its slices and events", async () => {
@@ -45,7 +45,7 @@ describe("Typed API client against mock API", () => {
 
     const slices = await api.getRunSlices(FIXTURE_RUN_1_ID);
     expect(slices.length).toBeGreaterThan(0);
-    expect(slices[0].attempts.length).toBeGreaterThan(0);
+    expect(slices[0]!.attempts.length).toBeGreaterThan(0);
 
     const events = await api.getRunEvents(FIXTURE_RUN_1_ID);
     expect(events.length).toBeGreaterThan(0);
@@ -68,7 +68,7 @@ describe("Typed API client against mock API", () => {
 
     const history = await api.getFindingHistory(FIXTURE_FINDING_1_ID);
     expect(history.length).toBeGreaterThan(0);
-    expect(history[0].to).toBe("confirmed");
+    expect(history[0]!.to).toBe("confirmed");
   });
 
   it("performs valid triage transition and updates finding", async () => {
@@ -81,7 +81,7 @@ describe("Typed API client against mock API", () => {
     expect(updated.owner).toBe("engineer@example.org");
 
     const history = await api.getFindingHistory(FIXTURE_FINDING_1_ID);
-    expect(history[history.length - 1].to).toBe("in_progress");
+    expect(history[history.length - 1]!.to).toBe("in_progress");
   });
 
   it("rejects invalid triage transition according to TRIAGE_TRANSITIONS", async () => {

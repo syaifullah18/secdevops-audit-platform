@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  Finding,
-  Project,
-  Run,
-  Slice,
-  Policy,
-  Exception,
-  PlatformEvent,
-} from "@sdap/core";
+import { Finding, Project, Run, Slice, Policy, Exception, PlatformEvent } from "@sdap/core";
 import {
   FIXTURE_FINDINGS,
   FIXTURE_PROJECTS,

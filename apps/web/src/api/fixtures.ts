@@ -40,9 +40,7 @@ export const FIXTURE_PROJECTS: Project[] = [
       {
         task: "validate",
         primary: { adapter: "anthropic", model: "claude-sonnet-5-5" },
-        fallbacks: [
-          { adapter: "google", model: "gemini-4-argon-high" },
-        ],
+        fallbacks: [{ adapter: "google", model: "gemini-4-argon-high" }],
       },
     ],
     escalation: null,
@@ -446,7 +444,8 @@ export const FIXTURE_FINDINGS: Finding[] = [
         file: "src/auth/session.ts",
         line: 88,
         scope: "POST /api/v1/auth/impersonate",
-        description: "Caller provides target tenantId and userId without required tenant ownership proof.",
+        description:
+          "Caller provides target tenantId and userId without required tenant ownership proof.",
       },
       {
         kind: "propagation",
@@ -493,7 +492,8 @@ export const FIXTURE_FINDINGS: Finding[] = [
     blockers: [],
     rejectionReason: null,
     remediation: {
-      strategy: "Enforce strict tenant scoping by comparing target tenant with caller's authenticated organization claims.",
+      strategy:
+        "Enforce strict tenant scoping by comparing target tenant with caller's authenticated organization claims.",
       codeChanges: [
         {
           file: "src/auth/session.ts",
@@ -622,7 +622,8 @@ export const FIXTURE_FINDINGS: Finding[] = [
     title: "Legacy Internal Cluster Route Lacks Tenant Boundary Check",
     description:
       "Legacy internal RPC endpoint permits cross-tenant queries when invoked from within the cluster subnet.",
-    rootCause: "Internal service mesh trusted perimeter assumption without mutual TLS tenant claims.",
+    rootCause:
+      "Internal service mesh trusted perimeter assumption without mutual TLS tenant claims.",
     location: {
       file: "src/auth/session.ts",
       line: 210,
@@ -704,7 +705,8 @@ export const FIXTURE_FINDINGS: Finding[] = [
         file: "services/ledger/webhooks.ts",
         line: 42,
         scope: "verifyWebhookSignature",
-        description: "Static fallback secret 'dev-stripe-secret-key-do-not-use' evaluated if env var is missing.",
+        description:
+          "Static fallback secret 'dev-stripe-secret-key-do-not-use' evaluated if env var is missing.",
       },
     ],
     evidence: [
@@ -735,7 +737,8 @@ export const FIXTURE_FINDINGS: Finding[] = [
     ],
     rejectionReason: null,
     remediation: {
-      strategy: "Crash at startup if WEBHOOK_SIGNING_KEY is missing in production environment instead of falling back to default.",
+      strategy:
+        "Crash at startup if WEBHOOK_SIGNING_KEY is missing in production environment instead of falling back to default.",
       codeChanges: [
         {
           file: "services/ledger/webhooks.ts",

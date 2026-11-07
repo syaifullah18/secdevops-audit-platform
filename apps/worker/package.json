@@ -1,6 +1,6 @@
 {
   "name": "@sdap/worker",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "BullMQ audit worker: runs the security-audit-skill phases with model fallback.",
   "license": "Apache-2.0",

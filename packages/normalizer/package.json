@@ -1,6 +1,6 @@
 {
   "name": "@sdap/normalizer",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Maps security-audit-skill output to core findings, fingerprints, dedup and SLA.",
   "license": "Apache-2.0",

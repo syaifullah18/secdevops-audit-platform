@@ -1,6 +1,6 @@
 {
   "name": "@sdap/sandbox",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Sandbox runner: no egress, sanitized env, resource limits, restricted writes.",
   "license": "Apache-2.0",

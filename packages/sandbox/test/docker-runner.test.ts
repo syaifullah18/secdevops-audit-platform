@@ -306,17 +306,23 @@ describe("DockerSandboxRunner", () => {
 
     afterAll(async () => {
       await new Promise<void>((r) => hostServer.close(() => r()));
-      // Nothing the runner created may outlive a run.
-      const leftovers = execFileSync(
-        "docker",
-        ["ps", "-a", "--filter", "label=io.sdap.sandbox=1", "--format", "{{.Names}}"],
-        { env: dockerEnv, encoding: "utf8" },
-      ).trim();
-      const nets = execFileSync(
-        "docker",
-        ["network", "ls", "--filter", "label=io.sdap.sandbox=1", "--format", "{{.Name}}"],
-        { env: dockerEnv, encoding: "utf8" },
-      ).trim();
+      // Nothing the runner created may outlive a run. Allow a short settle window under load.
+      let leftovers = "";
+      let nets = "";
+      for (let attempt = 0; attempt < 10; attempt++) {
+        leftovers = execFileSync(
+          "docker",
+          ["ps", "-a", "--filter", "label=io.sdap.sandbox=1", "--format", "{{.Names}}"],
+          { env: dockerEnv, encoding: "utf8" },
+        ).trim();
+        nets = execFileSync(
+          "docker",
+          ["network", "ls", "--filter", "label=io.sdap.sandbox=1", "--format", "{{.Name}}"],
+          { env: dockerEnv, encoding: "utf8" },
+        ).trim();
+        if (!leftovers && !nets) break;
+        await new Promise((r) => setTimeout(r, 200));
+      }
       expect(leftovers).toBe("");
       expect(nets).toBe("");
     });

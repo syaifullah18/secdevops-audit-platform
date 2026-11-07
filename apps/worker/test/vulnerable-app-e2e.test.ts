@@ -1,8 +1,8 @@
-import type { AddressInfo } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { createNotesServer } from "../../../fixtures/vulnerable-app/src/server.js";
 import { evaluateGate, type Policy } from "@sdap/core";
-import { normalizeRun } from "@sdap/normalizer";
+import { normalizeRun, type RawFinding, type LedgerUnit } from "@sdap/normalizer";
 
 describe("WS9: Vulnerable Application Fixture & End-to-End Security Validation", () => {
   let server: ReturnType<typeof createNotesServer>;
@@ -186,8 +186,8 @@ describe("WS9: Vulnerable Application Fixture & End-to-End Security Validation",
       ];
 
       const normalized = normalizeRun({
-        findings: rawFindings,
-        ledger,
+        findings: rawFindings as unknown as RawFinding[],
+        ledger: ledger as unknown as LedgerUnit[],
         run: { id: "00000000-0000-4000-8000-000000000001" },
         project: { id: "00000000-0000-4000-8000-000000000010" },
         model: { adapter: "agent-cli:agy", model: "gemini-3.8-flash-high" },

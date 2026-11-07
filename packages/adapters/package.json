@@ -1,6 +1,6 @@
 {
   "name": "@sdap/adapters",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Model adapters (Jev, Gemini/Argon, Claude, OpenAI-compatible, local, mock) behind one interface.",
   "license": "Apache-2.0",

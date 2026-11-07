@@ -561,6 +561,7 @@ export class DockerSandboxRunner implements SandboxRunner {
       const kill = (reason: "timeout" | "abort") => {
         if (settled) return;
         killedBy ??= reason;
+        execFile(this.dockerPath, ["kill", containerName], { env: this.dockerEnv }, () => {});
         child.kill("SIGKILL");
       };
       const timer = setTimeout(() => kill("timeout"), policy.timeoutSec * 1000);

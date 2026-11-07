@@ -1,6 +1,6 @@
 {
   "name": "@sdap/api",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Fastify API: projects, runs, findings, policies, webhooks, auth.",
   "license": "Apache-2.0",

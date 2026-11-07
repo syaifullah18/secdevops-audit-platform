@@ -1,133 +1,77 @@
 # @sdap/sandbox
 
-OS-enforced sandbox runners, egress allowlist proxying, and input validation for the SecDevOps Audit Platform (SDAP).
+OS-enforced sandbox runners, egress allowlisting, and input validation for the SecDevOps Audit
+Platform (SDAP). Owner: Workstream **WS8** (see `docs/workstreams/WS8.md`).
 
-Owner: Workstream **WS8** (see `docs/workstreams/WS8.md`).
+The platform executes agent CLIs and untrusted target code (test harnesses, exploit proofs,
+build scripts). That must happen in an OS-enforced sandbox (PRD 5.3, 10). When only
+`NoSandboxRunner` is available, `enforcing` is `false` and the worker keeps execution-dependent
+leads `needs_validation`.
 
----
+## Threat model
 
-## Overview
+Attacker: code inside the sandbox (malicious target repo, prompt-injected agent). Trusted: the
+worker process, the `SandboxPolicy` it builds, runner options, the container engine.
 
-The SecDevOps Audit Platform executes AI agent commands and untrusted target code (e.g., test harnesses, exploit proofs, build scripts) during security audits. To prevent sandbox escapes, credential theft, lateral movement, or data exfiltration, execution MUST occur in an isolated, OS-enforced sandbox environment (PRD 5.3, 10).
+| Threat                    | Mitigation (docker-hardened / gvisor)                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Exfiltration / C2         | Empty allowlist: `--network none` (loopback only). Non-empty: the container joins **only** a per-run `--internal` network whose sole other member is the allowlist proxy sidecar; there is no route around it. `HTTP(S)_PROXY` is set for convenience, not enforcement. No external DNS from the internal network.                                                      |
+| SSRF to host / metadata   | Proxy resolves once, checks **every** resolved address and pins the connection to it (no DNS rebinding). Loopback, link-local (`169.254.169.254`), `fd00:ec2::254`, multicast, NAT64/6to4 are never reachable via a hostname; private ranges only via an exact-hostname entry; IP literals only via an identical IP entry.                                              |
+| Host filesystem tampering | `--read-only` rootfs; `/target` and extra mounts `readonly`; only `/out` is writable; `/tmp` is tmpfs `noexec,nosuid,nodev`.                                                                                                                                                                                                                                            |
+| Mount / argv injection    | `--mount` (not `-v`) with paths free of `,` `:` `"`, control chars, `.`/`..`; host paths `realpath`-ed (symlinks followed) before checks; `/`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/etc`, `/boot`, `/root`, the engine socket (and any parent) and non-regular files are refused; `outputDir` may not overlap `targetDir`. Request argv goes after the image. |
+| Privilege escalation      | Non-root numeric `--user` (root refused), `--cap-drop ALL`, `no-new-privileges`, optional seccomp allowlist profile, `--ipc private`, `--init`.                                                                                                                                                                                                                         |
+| Credential / env leakage  | Container env is exactly `policy.env` (+ proxy vars). Always `--env KEY=value`, never a bare `KEY` (which would copy from the CLI's env). Keys `^[A-Z_][A-Z0-9_]*$`; `*_PROXY` keys reserved.                                                                                                                                                                           |
+| Resource exhaustion       | `--memory` = `--memory-swap` (no swap), `--cpus`, `--pids-limit`, tmpfs size, timeout → `docker kill`, captured output capped (16 MiB/stream default).                                                                                                                                                                                                                  |
+| Isolation over-claiming   | `kind: "gvisor"` only runs after a probe proves a non-host kernel; Podman's compat API ignores `--runtime`, so the flag alone is not trusted. `NoSandboxRunner.enforcing` is `false`.                                                                                                                                                                                   |
 
-When an OS-enforced sandbox is unavailable (such as during local development using `NoSandboxRunner`), the runner sets `enforcing: false`. The audit worker uses this flag to keep execution-dependent leads marked `needs_validation`, ensuring unverified execution never leads to confirmed findings or gate failures.
+## Enforcement matrix
 
----
+| Property            | `gvisor`                    | `docker-hardened`           | `none` (`NoSandboxRunner`)                       |
+| ------------------- | --------------------------- | --------------------------- | ------------------------------------------------ |
+| `enforcing`         | `true`                      | `true`                      | `false`                                          |
+| Kernel              | gVisor Sentry (user-space)  | shared host kernel          | host                                             |
+| Network             | none / internal net + proxy | none / internal net + proxy | **not restricted**                               |
+| Filesystem writes   | `/out` + tmpfs `/tmp` only  | `/out` + tmpfs `/tmp` only  | **not restricted** (cwd mapped to target/output) |
+| Capabilities / NNP  | none / yes                  | none / yes                  | host user                                        |
+| Memory / CPU / pids | cgroups                     | cgroups                     | **not restricted**                               |
+| Timeout / abort     | `docker kill` + SIGKILL     | `docker kill` + SIGKILL     | SIGKILL to the whole process group               |
+| Env                 | `policy.env` only           | `policy.env` only           | `policy.env` + fixed `PATH`                      |
 
-## Threat Model
+## Components
 
-| Threat                                   | Impact                                                                                                            | Mitigation Strategy                                                                                                                                                                                            | Enforced By                                           |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **Malicious Target Code Execution**      | Target repository contains malicious scripts, build hooks, or exploit payloads targeting the audit worker.        | Run in an unprivileged container with separate kernel/user space, dropped Linux capabilities, and blocked privilege escalation.                                                                                | `DockerSandboxRunner` (`docker-hardened` / `gvisor`)  |
-| **Data Exfiltration & C2 Communication** | Target code or compromised agent attempts to leak source code, tokens, or environment data to an external server. | Network isolation: containers default to `--network none`. When egress is permitted for LLM endpoints, all traffic is routed through a CONNECT allowlist proxy that rejects unlisted hosts with 403 Forbidden. | `DockerSandboxRunner` + `EgressProxy`                 |
-| **Host Filesystem Tampering**            | Target code writes persistence mechanisms, modifies host binaries, or tampers with target sources.                | Root filesystem is mounted read-only (`--read-only`), `/target` is mounted read-only (`:ro`), `/tmp` is an isolated in-memory tmpfs (`noexec,nosuid`). Only `/out` is mounted read-write for audit artifacts.  | `DockerSandboxRunner`                                 |
-| **Credential / Environment Leakage**     | Target process reads host environment variables (AWS keys, database credentials, API tokens).                     | Complete environment sanitization: the container receives ONLY variables explicitly declared in `policy.env`. Zero host environment inheritance.                                                               | `DockerSandboxRunner`, `NoSandboxRunner`              |
-| **Resource Exhaustion (DoS)**            | Fork bombs, memory leaks, or infinite loops hungrily consume worker node resources.                               | Strict kernel/cgroup resource limits: `--pids-limit`, `--cpus`, `--memory`, combined with enforced execution timeouts and SIGKILL termination.                                                                 | `DockerSandboxRunner`                                 |
-| **Path Traversal & Command Injection**   | Malicious requests provide relative paths (`../../etc/passwd`) or control characters in argv/env.                 | Strict boundary validation with Zod and path sanitization before invoking runtime binaries.                                                                                                                    | `validateSandboxPolicy`, `validateSandboxExecRequest` |
+- `DockerSandboxRunner` (`src/docker-runner.ts`): spawns the Docker-compatible CLI with an argv
+  array (never a shell). Options: `dockerPath`, `image` (default `alpine:3.22`, `--pull never`),
+  `runtime` (`runsc`), `user` (default `65534:65534`), `pidsLimit`, `seccompProfile`
+  (`deploy/sandbox/seccomp.json`; fail-closed if missing), `tmpfsSizeMb`, `egressProxyImage`
+  (default `sdap-egress-proxy:latest`), `maxOutputBytes`, `dockerEnv`. A runner-created
+  `outputDir` is chmod `0777` so the unprivileged uid can write; pre-existing directories are
+  never chmod-ed (make them writable for the sandbox uid yourself).
+- Egress sidecar: `deploy/sandbox/egress-proxy/server.cjs` (build the image first). Started per
+  run on the default network, then attached to the internal network after it has snapshot its
+  resolvers. Allowlist grammar: `host[:port]`, `*.domain.tld[:port]`, IPv4, `[IPv6]`; no port
+  means 80/443 only; `*` and `*.tld` are rejected. Clients must use `CONNECT` for HTTPS
+  (absolute-form `https://` GETs are refused).
+- `EgressProxy` (`src/proxy.ts`): the same rules in-process (binds `127.0.0.1` by default).
+  `test/proxy-conformance.test.ts` runs identical cases against both implementations.
+- `NoSandboxRunner` (`src/no-sandbox.ts`): local development only, see matrix.
+- Validation (`src/validation.ts`): `validateSandboxPolicy` (pure), `validateSandboxExecRequest`,
+  `resolveHostMounts` (filesystem checks).
 
----
+## Engine notes
 
-## Enforcement Matrix per Runner Kind
+- Podman via the Docker CLI (`DOCKER_HOST=unix://$(podman machine inspect --format
+'{{.ConnectionInfo.PodmanSocket.Path}}')`) works for everything except `--runtime` (silently
+  ignored, caught by the probe) and seccomp (CLI inlines the JSON). Use `dockerPath: "podman"`
+  for those.
+- Docker Engine >= 26 is required for internal networks not to forward DNS (CVE-2024-29018).
 
-| Isolation Feature        |                            `gvisor`                             |                        `docker-hardened`                        |        `none` (`NoSandboxRunner`)        |
-| ------------------------ | :-------------------------------------------------------------: | :-------------------------------------------------------------: | :--------------------------------------: |
-| **Enforcing Flag**       |                             `true`                              |                             `true`                              |                 `false`                  |
-| **Kernel Isolation**     |       Virtualized Sentry kernel (intercepts all syscalls)       |                    Shared host Linux kernel                     |       None (runs directly on host)       |
-| **Filesystem Isolation** | Read-only root & `/target`; tmpfs `/tmp`; writeable `/out` only | Read-only root & `/target`; tmpfs `/tmp`; writeable `/out` only | No filesystem isolation (writes to host) |
-| **Network Isolation**    |               `--network none` or proxy allowlist               |               `--network none` or proxy allowlist               |           Host network access            |
-| **Capabilities Dropped** |                    `ALL` (`--cap-drop ALL`)                     |                    `ALL` (`--cap-drop ALL`)                     |   N/A (runs with host user privileges)   |
-| **No New Privileges**    |               `--security-opt no-new-privileges`                |               `--security-opt no-new-privileges`                |                   N/A                    |
-| **User Separation**      |                  Non-root UID (`65534:65534`)                   |                  Non-root UID (`65534:65534`)                   |        Inherits host process UID         |
-| **Memory Limit**         |                Enforced via cgroups (`--memory`)                |                Enforced via cgroups (`--memory`)                |   Not enforced (monitors process only)   |
-| **CPU Limit**            |                 Enforced via cgroups (`--cpus`)                 |                 Enforced via cgroups (`--cpus`)                 |               Not enforced               |
-| **PIDs Limit**           |              Enforced via cgroups (`--pids-limit`)              |              Enforced via cgroups (`--pids-limit`)              |               Not enforced               |
-| **Timeout Termination**  |             Process & container killed with SIGKILL             |             Process & container killed with SIGKILL             |       Process killed with SIGKILL        |
-| **Host Env Sanitized**   |                   Strictly `policy.env` only                    |                   Strictly `policy.env` only                    |  Strictly `policy.env` (+ minimal PATH)  |
+## Remaining risks
 
----
+See the "Security review" section of `docs/workstreams/WS8-done.md`.
 
-## Architecture & Components
+## Tests
 
-### 1. `DockerSandboxRunner`
-
-Provides OS-enforced isolation using Docker or Podman.
-
-- Detects whether gVisor (`runsc`) is registered on the daemon (`kind: "gvisor"`), otherwise operates as hardened Docker (`kind: "docker-hardened"`).
-- Spawns the Docker CLI via `node:child_process` `spawn` with an explicit `argv` array (never a shell string).
-- Automatically mounts `targetDir` as read-only at `/target` and `outputDir` as read-write at `/out`.
-- Sets `--read-only`, `--tmpfs /tmp:rw,noexec,nosuid,size=64m`, `--cap-drop ALL`, and `--security-opt no-new-privileges`.
-- Automatically provisions and tears down an internal `EgressProxy` when `policy.egressAllowlist` contains entries; otherwise applies `--network none`.
-
-### 2. `EgressProxy`
-
-A lightweight forward HTTP and HTTPS CONNECT proxy.
-
-- Allows outbound connections only to hosts matching `policy.egressAllowlist` (exact hostnames, `host:port`, or wildcard domains such as `*.anthropic.com`).
-- Returns `403 Forbidden` for any non-allowlisted destination.
-- Gracefully handles host resolution aliases (`host.docker.internal` -> `127.0.0.1`) when running in local development or container test environments.
-
-### 3. `NoSandboxRunner`
-
-A non-enforcing runner designed for local testing and debugging.
-
-- Executes commands directly on the host.
-- Sanitizes the environment so host variables are not passed through.
-- Sets `enforcing: false`, instructing the orchestrator to mark leads as `needs_validation`.
-
-### 4. Input Validation & Hardening
-
-- Paths must be absolute and free of traversal (`..`) or control characters.
-- Reserved paths (`/`, `/proc`, `/sys`, `/dev`) are rejected for mounts.
-- Environment keys must match `/^[A-Z_][A-Z0-9_]*$/`.
-- Environment values and command `argv` must not contain ASCII control characters.
-
----
-
-## Usage Example
-
-```typescript
-import { DockerSandboxRunner } from "@sdap/sandbox";
-
-const runner = new DockerSandboxRunner();
-
-// Verify runtime availability and policy validity
-const preflight = await runner.preflight({
-  targetDir: "/path/to/repo",
-  outputDir: "/path/to/artifacts",
-  cpus: 2,
-  memoryMb: 2048,
-  timeoutSec: 300,
-  egressAllowlist: ["api.anthropic.com"],
-});
-
-if (!preflight.ok) {
-  throw new Error(`Sandbox cannot run: ${preflight.message}`);
-}
-
-const result = await runner.exec({
-  argv: ["npm", "test"],
-  policy: {
-    targetDir: "/path/to/repo",
-    outputDir: "/path/to/artifacts",
-    timeoutSec: 120,
-    env: {
-      CI: "true",
-      NODE_ENV: "test",
-    },
-    egressAllowlist: [], // Network disabled (--network none)
-  },
-  onStdout: (chunk) => console.log(chunk),
-});
-
-console.log("Exit code:", result.exitCode);
-console.log("Killed by:", result.killedBy);
-```
-
----
-
-## Scripts
-
-- `pnpm build`: Compile TypeScript to `dist/`
-- `pnpm typecheck`: Run `tsc --noEmit`
-- `pnpm lint`: Run ESLint
-- `pnpm test`: Run Vitest unit and integration suite
+`pnpm test` runs unit tests always, and live container tests when a Docker-compatible engine is
+reachable (`DOCKER_HOST`, or an auto-detected Podman machine). Live tests build
+`sdap-egress-proxy:latest` from `deploy/sandbox/egress-proxy` and need `alpine:3.22` locally;
+otherwise they are skipped with a message. gVisor tests run only when the probe proves gVisor.

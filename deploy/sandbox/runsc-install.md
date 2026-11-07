@@ -60,6 +60,18 @@ docker info | grep runsc
 # Expected: Runtimes: ... runsc
 ```
 
+> **Do not treat `docker info` listing `runsc` as proof.** Podman lists `runsc` among its
+> known runtimes even when the binary is absent, and Podman's Docker-compatible API
+> silently ignores `--runtime` (verified on Podman 5.6: `docker run --runtime runsc` ran
+> under `crun`). `DockerSandboxRunner` therefore verifies gVisor with a probe: it runs
+> `uname -r` on the default runtime and on `runsc` and refuses (`preflight` fails, `exec`
+> throws) unless the kernels differ. Use the same check manually:
+>
+> ```bash
+> docker run --rm alpine:3.22 uname -r                  # host kernel
+> docker run --rm --runtime=runsc alpine:3.22 uname -r  # gVisor reports e.g. 4.4.0
+> ```
+
 Test running a container with gVisor:
 
 ```bash
@@ -82,9 +94,12 @@ runsc = [
 Verify with:
 
 ```bash
-podman info | grep runsc
-podman run --rm --runtime=runsc alpine:3.22 dmesg
+podman run --rm --runtime=runsc alpine:3.22 dmesg   # must print "Starting gVisor..."
 ```
+
+With Podman, point `DockerSandboxRunner` at the `podman` CLI (`dockerPath: "podman"`), not
+at the Docker CLI + Podman socket, so that `--runtime` and `--security-opt seccomp=<path>`
+are honoured.
 
 ## 5. Kubernetes Integration
 

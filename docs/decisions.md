@@ -62,3 +62,24 @@ and CLI, so no policy file can make `needs_validation`, `rejected` or System 1 o
 
 Preflight: agy's Claude Sonnet 5.5 quota is exhausted. → Every Claude fallback runs on the
 `claude` runner, every Gemini model on `agy`.
+
+## D-011 Container runtime is Podman
+
+Docker Desktop and OrbStack are not installed; a Podman machine is. → Docker CLI and tests use
+`DOCKER_HOST=unix://<podman machine socket>`. `docker compose` is not installed; Phase 2 uses
+`podman compose` or installs the compose plugin.
+
+## D-012 Default worker model: Gemini 3.8 Flash (High)
+
+The maintainer reported a tight Claude quota. → Every worker defaults to agy /
+`gemini-3.8-flash-high`, overriding the primary column of the routing table. Claude is reserved for
+the lead (integration, review, contracts). The cross-family review rule still applies: Flash-
+authored code is reviewed by the lead (Claude) before merge.
+
+## D-013 agy workers run headless with a scoped allowlist
+
+The Orca-supervised agy TUI did not reach readiness, and headless agy cannot prompt for command
+permission (`--mode auto` is unavailable on this account). → Each worker runs `agy -p` as its own
+process in its own worktree with `--settings` granting a scoped allowlist (pnpm, node, read-only
+shell tools, git add/commit/diff/log/status; docker/podman for WS8 only) and denying push, branch
+switching, reset/merge/rebase, network fetchers and sudo. Permissions are never bypassed wholesale.

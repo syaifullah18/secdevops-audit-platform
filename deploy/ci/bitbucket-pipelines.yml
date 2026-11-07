@@ -1,0 +1,36 @@
+# Bitbucket Pipelines template for SecDevOps Audit Platform (SDAP)
+# Triggers focused security audits on pull requests and commits.
+# Fails the pipeline if confirmed high or critical vulnerabilities are discovered.
+
+image: node:24
+
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: SDAP Security Audit Gate
+          caches:
+            - node
+          script:
+            # Install SDAP CLI globally
+            - npm install -g @sdap/cli
+            # Export environment configuration
+            # SDAP_TOKEN should be configured in Repository settings > Repository variables (secured)
+            - export SDAP_API_URL="${SDAP_API_URL:-https://sdap.internal.example.com}"
+            - export SDAP_PROJECT="${SDAP_PROJECT:-00000000-0000-4000-8000-000000000001}"
+            - export SDAP_TOKEN="${SDAP_TOKEN}"
+            # Run focused audit, wait for completion, and gate on confirmed findings
+            - sdap run --mode focused --wait --fail-on confirmed:high
+
+  branches:
+    main:
+      - step:
+          name: SDAP Main Branch Audit
+          caches:
+            - node
+          script:
+            - npm install -g @sdap/cli
+            - export SDAP_API_URL="${SDAP_API_URL:-https://sdap.internal.example.com}"
+            - export SDAP_PROJECT="${SDAP_PROJECT:-00000000-0000-4000-8000-000000000001}"
+            - export SDAP_TOKEN="${SDAP_TOKEN}"
+            - sdap run --mode focused --wait --fail-on confirmed:high

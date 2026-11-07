@@ -1,0 +1,30 @@
+# GitLab CI/CD pipeline template for SecDevOps Audit Platform (SDAP)
+# Executes focused security audits on merge requests and branch pushes.
+# Reads SDAP_TOKEN from GitLab CI/CD Variables (Settings > CI/CD > Variables, Masked & Protected).
+
+stages:
+  - test
+  - security
+
+variables:
+  # Base URL of internal SDAP API instance
+  SDAP_API_URL: "https://sdap.internal.example.com"
+  # Target project UUID registered in SDAP
+  SDAP_PROJECT: "00000000-0000-4000-8000-000000000001"
+
+sdap-audit-gate:
+  stage: security
+  image: node:24
+  before_script:
+    - npm install -g @sdap/cli
+  script:
+    # SDAP_TOKEN is read directly from the GitLab CI secret store
+    - sdap run --mode focused --wait --fail-on confirmed:high
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  artifacts:
+    when: always
+    reports:
+      junit: sdap-report.xml
+    expire_in: 30 days

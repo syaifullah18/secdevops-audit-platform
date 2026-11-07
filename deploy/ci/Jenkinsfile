@@ -1,0 +1,37 @@
+// Jenkinsfile template for SecDevOps Audit Platform (SDAP)
+// Triggers focused audits and gates pull requests on confirmed high/critical findings.
+// Reads SDAP_TOKEN from Jenkins Credentials store (Secret text ID: 'sdap-token').
+
+pipeline {
+    agent {
+        docker {
+            image 'node:24'
+        }
+    }
+
+    environment {
+        SDAP_API_URL = 'https://sdap.internal.example.com'
+        SDAP_PROJECT = '00000000-0000-4000-8000-000000000001'
+        // Read API token securely from Jenkins secret store
+        SDAP_TOKEN = credentials('sdap-token')
+    }
+
+    stages {
+        stage('SDAP Security Gate') {
+            steps {
+                sh 'npm install -g @sdap/cli'
+                // Execute focused audit, wait for completion, and fail on confirmed high/critical findings
+                sh 'sdap run --mode focused --wait --fail-on confirmed:high'
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'SDAP security audit gate failed or reported high/critical findings.'
+        }
+        success {
+            echo 'SDAP security audit gate passed cleanly.'
+        }
+    }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FirecrackerMicroVmProfileStub",
+  "description": "Configuration profile stub for Phase 2 Firecracker microVM sandboxing",
+  "version": "0.1.0-stub",
+  "status": "deferred-phase-2",
+  "boot_source": {
+    "kernel_image_path": "/opt/sdap/kernels/vmlinux-6.1",
+    "boot_args": "console=ttyS0 reboot=k panic=1 pci=off init=/init root=/dev/vda ro"
+  },
+  "drives": [
+    {
+      "drive_id": "rootfs",
+      "path_on_host": "/opt/sdap/images/rootfs-alpine-base.ext4",
+      "is_root_device": true,
+      "is_read_only": true
+    },
+    {
+      "drive_id": "target",
+      "path_on_host": "/var/sdap/sandboxes/target.ext4",
+      "is_root_device": false,
+      "is_read_only": true
+    },
+    {
+      "drive_id": "out",
+      "path_on_host": "/var/sdap/sandboxes/out.ext4",
+      "is_root_device": false,
+      "is_read_only": false
+    }
+  ],
+  "machine_config": {
+    "vcpu_count": 2,
+    "mem_size_mib": 4096,
+    "smt": false
+  },
+  "network_interfaces": [
+    {
+      "iface_id": "eth0",
+      "guest_mac": "AA:FC:00:00:00:01",
+      "host_dev_name": "tap-sdap-0",
+      "egress_proxy_only": true
+    }
+  ],
+  "jailer": {
+    "id": "sdap-vm-stub",
+    "exec_file": "/usr/bin/firecracker",
+    "uid": 65534,
+    "gid": 65534,
+    "chroot_base_dir": "/srv/jailer",
+    "cgroup_version": 2
+  }
+}

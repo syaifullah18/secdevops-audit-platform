@@ -88,3 +88,10 @@ Update: file tools need a target rule. Globs (`/**`, `**`) do not match; a direc
 Each worker gets its own settings file granting file tools only on its own worktree
 (`write_file(<worktree dir>)` and so on) and read access to its spec. Specs tell workers to run one
 command per call without `PATH=` prefixes; the runner exports Node 24 on PATH.
+
+## D-014 Claude available again: return to the routing table
+
+The maintainer reported Claude capacity is back. → Running Flash workers finish their current pass
+(restarting would discard work). New launches and relaunches follow the section B routing table.
+Claude-routed work runs as Orca-supervised `claude` workers, which appear in Orca's UI. WS8
+(security-critical) gets an Opus review-and-harden pass on its branch before merge.

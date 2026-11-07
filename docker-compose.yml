@@ -1,0 +1,238 @@
+# SecDevOps Audit Platform: one-command evaluation stack.
+#   cp .env.example .env && docker compose up --build
+# Variables come from .env (see .env.example and deploy/compose/env.compose.example).
+# Only the web UI, API and Grafana are published, on 127.0.0.1. No telemetry is enabled anywhere.
+name: sdap
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sdap}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sdap}
+      POSTGRES_DB: ${POSTGRES_DB:-sdap}
+      # Password for the read-only role Grafana uses (created by deploy/postgres/10-init.sh).
+      GRAFANA_PG_PASSWORD: ${GRAFANA_PG_PASSWORD:-sdap-grafana-ro}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/10-init.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+      - ./apps/api/drizzle:/sdap/drizzle:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging: *logging
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: sdap-api:local
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      API_PORT: "8080"
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+      DATABASE_URL: postgres://${POSTGRES_USER:-sdap}:${POSTGRES_PASSWORD:-sdap}@postgres:5432/${POSTGRES_DB:-sdap}
+      REDIS_URL: redis://redis:6379
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      AUTH_DEV_MODE: ${AUTH_DEV_MODE:-false}
+      SDAP_TELEMETRY: ${SDAP_TELEMETRY:-off}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    image: sdap-worker:local
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER:-sdap}:${POSTGRES_PASSWORD:-sdap}@postgres:5432/${POSTGRES_DB:-sdap}
+      REDIS_URL: redis://redis:6379
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      SDAP_METRICS_PORT: "9464"
+      MODEL_DEFAULT_ADAPTER: ${MODEL_DEFAULT_ADAPTER:-mock}
+      JEV_API_URL: ${JEV_API_URL:-}
+      JEV_API_KEY: ${JEV_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_COMPAT_BASE_URL: ${OPENAI_COMPAT_BASE_URL:-}
+      OPENAI_COMPAT_API_KEY: ${OPENAI_COMPAT_API_KEY:-}
+      LOCAL_MODEL_BASE_URL: ${LOCAL_MODEL_BASE_URL:-http://host.docker.internal:11434}
+      ARTIFACT_STORE_URL: ${ARTIFACT_STORE_URL:-}
+      ARTIFACT_STORE_BUCKET: ${ARTIFACT_STORE_BUCKET:-sdap-artifacts}
+      SDAP_TELEMETRY: ${SDAP_TELEMETRY:-off}
+    volumes:
+      - worker-runs:/var/lib/sdap/runs
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:9464/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: sdap-web:local
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      API_UPSTREAM: http://api:8080
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  loki:
+    image: grafana/loki:3.5.0
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./deploy/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+  # Ships container logs to Loki with a small, fixed label set (see deploy/loki/README.md).
+  alloy:
+    image: grafana/alloy:v1.10.0
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+    depends_on:
+      loki: { condition: service_healthy }
+    volumes:
+      - ./deploy/loki/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      # Read-only access to the container runtime socket, used only to discover and tail logs.
+      - ${CONTAINER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    depends_on:
+      prometheus: { condition: service_healthy }
+      loki: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-sdap-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      # No telemetry: analytics, update checks and the news feed are all off.
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_ANALYTICS_FEEDBACK_LINKS_ENABLED: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      # Used by provisioning/datasources/datasources.yml.
+      POSTGRES_DB: ${POSTGRES_DB:-sdap}
+      GRAFANA_PG_PASSWORD: ${GRAFANA_PG_PASSWORD:-sdap-grafana-ro}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:${GRAFANA_HOST_PORT:-3001}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+volumes:
+  postgres-data:
+  redis-data:
+  worker-runs:
+  prometheus-data:
+  loki-data:
+  alloy-data:
+  grafana-data:

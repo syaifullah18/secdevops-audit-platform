@@ -1,0 +1,37 @@
+# Hardening override for shared hosts: read-only root filesystems, no capabilities, no privilege
+# escalation, resource limits. OIDC must be configured (dev tokens are refused in production).
+#   docker compose -f docker-compose.yml -f deploy/compose/docker-compose.hardened.yml up -d
+x-app-hardening: &app-hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp
+
+services:
+  api:
+    <<: *app-hardening
+    environment:
+      NODE_ENV: production
+      AUTH_DEV_MODE: "false"
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512M }
+  worker:
+    <<: *app-hardening
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2G }
+  web:
+    <<: *app-hardening
+    # nginx needs writable cache and run dirs.
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }

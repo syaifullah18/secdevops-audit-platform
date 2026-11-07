@@ -1,0 +1,28 @@
+# Prometheus configuration for the SDAP stack (docker compose service names).
+# For Kubernetes, scrape through pod annotations or a ServiceMonitor instead (see deploy/helm).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: sdap-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8080"]
+        labels:
+          service: api
+    # Once the API requires METRICS_TOKEN, mount the token and uncomment:
+    # authorization:
+    #   type: Bearer
+    #   credentials_file: /etc/prometheus/secrets/metrics_token
+
+  - job_name: sdap-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["worker:9464"]
+        labels:
+          service: worker
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

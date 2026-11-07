@@ -17,15 +17,22 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "dev": "tsx watch src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi": "tsx scripts/generate-openapi.ts && prettier --write openapi.json"
   },
   "dependencies": {
     "@sdap/core": "workspace:*",
     "@sdap/normalizer": "workspace:*",
+    "bullmq": "^6.7.1",
     "drizzle-orm": "^0.45.4",
-    "pg": "^8.23.1"
+    "fastify": "^5.12.8",
+    "jose": "^6.2.15",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",

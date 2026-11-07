@@ -12,11 +12,29 @@ export {
   validateSandboxExecRequest,
   validateSafePath,
   hasControlCharacters,
+  parseEgressAllowlist,
+  resolveHostMounts,
+  sensitiveHostPaths,
   type ParsedSandboxPolicy,
+  type ResolvedMount,
+  type ResolvedMounts,
 } from "./validation.js";
 
-export { EgressProxy, type EgressProxyOptions } from "./proxy.js";
+export {
+  parseAllowlistEntry,
+  matchAllowlist,
+  classifyAddress,
+  addressPermitted,
+  type AllowlistRule,
+  type AddressClass,
+} from "./egress-rules.js";
 
-export { NoSandboxRunner } from "./no-sandbox.js";
+export { EgressProxy, type EgressProxyOptions, type LookupFn } from "./proxy.js";
 
-export { DockerSandboxRunner, type DockerSandboxRunnerOptions } from "./docker-runner.js";
+export { NoSandboxRunner, DEFAULT_SYSTEM_PATH } from "./no-sandbox.js";
+
+export {
+  DockerSandboxRunner,
+  type DockerSandboxRunnerOptions,
+  type EgressAttachment,
+} from "./docker-runner.js";

@@ -144,6 +144,20 @@ structured log line:
 
 Webhooks use the actor `webhook:<provider>`.
 
+## Metrics (WS7)
+
+`src/metrics.ts` exports `createMetrics(registry?)` (typed `sdap_*` metric handles plus default
+process metrics on a fresh `Registry`) and `metricsHandler(registry, { bearerToken? })`, a Fastify
+handler for `GET /metrics`. The metrics are not wired into routes yet; that happens in Phase 2:
+
+```ts
+const metrics = createMetrics();
+app.get("/metrics", metricsHandler(metrics.registry, { bearerToken: process.env.METRICS_TOKEN }));
+```
+
+Names and label sets are listed in `deploy/README.md`. Labels are bounded enums or ids; pass free-form
+values (model, adapter, reason) through `sanitizeLabelValue`, and never a finding title or code.
+
 ## Scripts
 
 `pnpm build`, `pnpm start`, `pnpm dev`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm openapi`.

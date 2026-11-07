@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sdap.fullname" . }}
+  labels:
+    {{- include "sdap.labels" (dict "ctx" . "component" "sdap") | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.config.nodeEnv | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  API_PORT: {{ .Values.api.port | quote }}
+  API_BASE_URL: {{ .Values.config.apiBaseUrl | quote }}
+  OIDC_ISSUER_URL: {{ .Values.config.oidcIssuerUrl | quote }}
+  OIDC_CLIENT_ID: {{ .Values.config.oidcClientId | quote }}
+  OIDC_AUDIENCE: {{ .Values.config.oidcAudience | quote }}
+  AUTH_DEV_MODE: "false"
+  MODEL_DEFAULT_ADAPTER: {{ .Values.config.modelDefaultAdapter | quote }}
+  LOCAL_MODEL_BASE_URL: {{ .Values.config.localModelBaseUrl | quote }}
+  ARTIFACT_STORE_URL: {{ .Values.config.artifactStoreUrl | quote }}
+  ARTIFACT_STORE_BUCKET: {{ .Values.config.artifactStoreBucket | quote }}
+  SDAP_TELEMETRY: {{ .Values.config.telemetry | quote }}
+  WORKER_CONCURRENCY: {{ .Values.config.workerConcurrency | quote }}
+  SDAP_METRICS_PORT: {{ .Values.worker.metricsPort | quote }}

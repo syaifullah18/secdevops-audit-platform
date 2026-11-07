@@ -1,0 +1,54 @@
+// Grafana Alloy: tail container logs and push them to Loki.
+//
+// Labels are deliberately few and low-cardinality:
+//   service  compose service name (api, worker, web, ...)
+//   level    log level parsed from pino JSON lines (debug|info|warn|error)
+// Everything else (run id, project, phase, request id) stays inside the JSON log line and is
+// queried with `| json` in LogQL. Never promote finding titles, paths or code to labels.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=sdap"]
+  }
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.sdap.receiver]
+}
+
+loki.process "sdap" {
+  stage.json {
+    expressions = { level = "level" }
+  }
+
+  // pino logs numeric levels (30=info, 40=warn, 50=error); map to names.
+  stage.template {
+    source   = "level"
+    template = `{{ if eq .Value "10" }}debug{{ else if eq .Value "20" }}debug{{ else if eq .Value "30" }}info{{ else if eq .Value "40" }}warn{{ else if eq .Value "50" }}error{{ else if eq .Value "60" }}error{{ else }}{{ .Value }}{{ end }}`
+  }
+
+  stage.labels {
+    values = { level = "" }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

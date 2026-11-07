@@ -1,0 +1,38 @@
+# Rendered by the nginx image's envsubst on start: ${API_UPSTREAM} and ${NGINX_LOCAL_RESOLVERS}
+# (set by the image from /etc/resolv.conf) are substituted; nginx's own variables ($uri, $host,
+# ...) are not environment variables, so they are left alone.
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  server_tokens off;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+
+  location = /healthz {
+    access_log off;
+    default_type application/json;
+    return 200 '{"status":"ok"}';
+  }
+
+  location /api/ {
+    # A variable in proxy_pass makes nginx resolve the upstream per request, so the web container
+    # starts (and stays up) even when the API is not reachable yet.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    set $api_upstream ${API_UPSTREAM};
+    proxy_pass $api_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # Server-sent events (/runs/:id/events/stream) must not be buffered.
+    proxy_buffering off;
+    proxy_read_timeout 1h;
+  }
+
+  location / {
+    try_files $uri /index.html;
+  }
+}

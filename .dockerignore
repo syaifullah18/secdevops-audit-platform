@@ -1,0 +1,21 @@
+# Keep the build context small and free of local state or secrets.
+.git
+.github
+.claude
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+/runs
+/artifacts
+playwright-report
+test-results
+docs
+fixtures
+# The vendored skill is needed by the worker image, but not its own git metadata or tests.
+vendor/**/.git
+vendor/**/node_modules

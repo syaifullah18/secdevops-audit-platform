@@ -1,0 +1,76 @@
+{{- if .Values.worker.networkPolicy.enabled }}
+# The worker clones untrusted repositories and runs target code, so its network reach is limited to
+# DNS, the datastores, and (optionally) public HTTPS. It cannot reach private ranges, other
+# namespaces' pods or the cloud metadata endpoint unless you add rules in extraEgress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "sdap.fullname" . }}-worker
+  labels:
+    {{- include "sdap.labels" (dict "ctx" . "component" "worker") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "sdap.selectorLabels" (dict "ctx" . "component" "worker") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- if .Values.worker.networkPolicy.metricsNamespaceLabels }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.worker.networkPolicy.metricsNamespaceLabels | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.worker.metricsPort }}
+    {{- else }}
+    []
+    {{- end }}
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.worker.networkPolicy.dnsNamespaceLabels | nindent 14 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if .Values.postgres.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "sdap.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
+    {{- if .Values.redis.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "sdap.selectorLabels" (dict "ctx" . "component" "redis") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+    {{- end }}
+    {{- if .Values.worker.networkPolicy.allowPublicHttps }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+      ports:
+        {{- range .Values.worker.networkPolicy.publicHttpsPorts }}
+        - protocol: TCP
+          port: {{ . }}
+        {{- end }}
+    {{- end }}
+    {{- with .Values.worker.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

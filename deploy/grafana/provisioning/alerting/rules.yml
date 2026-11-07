@@ -1,0 +1,119 @@
+apiVersion: 1
+
+# Grafana-managed alert rules. Contact points and notification policies are left to the operator
+# (Slack, Teams, email or Mattermost webhooks hold credentials and do not belong in the repo).
+groups:
+  - orgId: 1
+    name: sdap-platform
+    folder: SDAP
+    interval: 1m
+    rules:
+      - uid: sdap-run-failure-rate
+        title: Run failure rate high
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning, team: devops }
+        annotations:
+          summary: More than 20% of finished audit runs failed in the last hour.
+          description: See the SDAP Overview dashboard, panel "Run failures by phase and reason".
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(sdap_runs_total{status="failed"}[1h]))
+                / clamp_min(sum(increase(sdap_runs_total{status=~"succeeded|failed"}[1h])), 1)
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0.2] }
+
+      - uid: sdap-sla-breach
+        title: Confirmed findings past SLA
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical, team: security }
+        annotations:
+          summary: One or more open confirmed findings are past their SLA due date.
+          description: Only confirmed findings count. See the SDAP Overview dashboard.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: postgres
+            model:
+              refId: A
+              format: table
+              rawQuery: true
+              editorMode: code
+              rawSql: >-
+                SELECT count(*)::float AS value FROM findings
+                WHERE verdict = 'confirmed'
+                AND status IN ('new', 'confirmed', 'in_progress')
+                AND sla_due < now()
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: sdap-queue-backlog
+        title: Run queue backlog
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning, team: devops }
+        annotations:
+          summary: More than 20 audit runs have been waiting in the queue for 10 minutes.
+          description: Add worker capacity or check worker health (SDAP Overview, "Queue depth").
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(sdap_queue_depth{queue="sdap-runs", state="waiting"})
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [20] }

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: sdap
+description: SecDevOps Audit Platform (API, worker, web) with optional evaluation Postgres and Redis.
+type: application
+version: 0.1.0
+appVersion: "0.0.0"
+kubeVersion: ">=1.27.0-0"
+keywords: [security, audit, devsecops]
+home: https://github.com/cloudflare/security-audit-skill

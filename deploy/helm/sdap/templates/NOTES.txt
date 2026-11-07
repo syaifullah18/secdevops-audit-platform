@@ -1,0 +1,11 @@
+SDAP {{ .Chart.AppVersion }} installed as {{ include "sdap.fullname" . }}.
+
+1. Create the Secret named in secrets.existingSecret ("{{ include "sdap.secretName" . }}") with at least
+   {{ .Values.secrets.databaseUrlKey }} and {{ .Values.secrets.redisUrlKey }}. The chart never stores secret values.
+2. Apply the database migrations from apps/api/drizzle before the first start.
+3. Configure OIDC (config.oidcIssuerUrl, config.oidcAudience). Dev tokens are always off in Kubernetes.
+{{- if .Values.worker.runtimeClassName }}
+4. The worker runs with RuntimeClass "{{ .Values.worker.runtimeClassName }}".
+{{- else }}
+4. The worker uses the cluster default runtime. Set worker.runtimeClassName (gVisor) before running untrusted code.
+{{- end }}

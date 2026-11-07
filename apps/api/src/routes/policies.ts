@@ -83,9 +83,11 @@ const gateInputs = async (
     const target = findings.find((f) => f.fingerprint === e.fingerprint);
     if (!target) continue;
     const history = await store.findings.history(target.id);
+    // `>=`: a reopen in the same millisecond as the exception still revokes it. The event that
+    // created the exception goes *to* accepted_risk/false_positive, so it can never match here.
     const reopened = history.some(
       (h) =>
-        new Date(h.at) > new Date(e.createdAt) &&
+        new Date(h.at) >= new Date(e.createdAt) &&
         (h.from === "accepted_risk" || h.from === "false_positive") &&
         h.to === "confirmed",
     );

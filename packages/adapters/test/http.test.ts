@@ -101,13 +101,13 @@ describe("HTTP Error Mapping and Retry-After Parsing", () => {
 
     let attempts = 0;
     try {
-      server.setHandler(async (_req, res) => {
+      server.setHandler(async (req, res) => {
         attempts++;
         if (attempts === 1) {
-          // Delay longer than defaultTimeoutMs to trigger timeout
-          await new Promise((resolve) => setTimeout(resolve, 80));
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
+          // Never answer the first attempt: it can only end by the client-side timeout.
+          // Waiting for the client to abort keeps this independent of machine load.
+          await new Promise<void>((resolve) => req.on("close", () => resolve()));
+          res.destroy();
         } else {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ ok: true, attempt: attempts }));
@@ -118,7 +118,8 @@ describe("HTTP Error Mapping and Retry-After Parsing", () => {
         adapterId: "test-adapter",
         url: server.url,
         retryConfig: { maxRetries: 1, initialDelayMs: 10, maxDelayMs: 50, backoffFactor: 1 },
-        defaultTimeoutMs: 30, // Attempt 1 will time out after 30ms, then retry and succeed
+        // Attempt 1 hangs and times out; attempt 2 answers at once, well inside the margin.
+        defaultTimeoutMs: 250,
       });
 
       expect(attempts).toBe(2);

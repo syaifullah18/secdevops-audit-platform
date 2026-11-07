@@ -27,11 +27,11 @@ services:
         limits: { cpus: "2.0", memory: 2G }
   web:
     <<: *app-hardening
-    # nginx needs writable cache and run dirs.
+    # nginx needs a writable cache dir and conf.d (the entrypoint renders the template there).
     tmpfs:
       - /tmp
       - /var/cache/nginx
-      - /var/run
+      - /etc/nginx/conf.d
     deploy:
       resources:
         limits: { cpus: "0.5", memory: 128M }

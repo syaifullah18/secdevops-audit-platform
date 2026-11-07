@@ -1,0 +1,151 @@
+# Default values for the SDAP chart. Nothing in this file is a secret: credentials are read from
+# existing Kubernetes Secrets that you create out of band (sealed-secrets, external-secrets, ...).
+
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+image:
+  # Images are built from apps/*/Dockerfile and pushed to your own registry.
+  registry: ""
+  pullPolicy: IfNotPresent
+  # Defaults to the chart appVersion when empty.
+  tag: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+# Non-secret application configuration, rendered into the ConfigMap.
+config:
+  nodeEnv: production
+  logLevel: info
+  apiBaseUrl: ""
+  oidcIssuerUrl: ""
+  oidcClientId: ""
+  oidcAudience: ""
+  modelDefaultAdapter: mock
+  localModelBaseUrl: ""
+  artifactStoreUrl: ""
+  artifactStoreBucket: sdap-artifacts
+  telemetry: "off"
+  workerConcurrency: 2
+
+# References to Secrets. The chart never creates or contains secret values.
+secrets:
+  # Name of an existing Secret. Required keys: DATABASE_URL, REDIS_URL.
+  # Empty means "<release fullname>-secrets"; pods stay pending until that Secret exists.
+  existingSecret: ""
+  # Optional keys in the same Secret (pods start without them): JEV_API_URL, JEV_API_KEY,
+  # GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_COMPAT_BASE_URL, OPENAI_COMPAT_API_KEY,
+  # WEBHOOK_SECRETS, METRICS_TOKEN.
+  databaseUrlKey: DATABASE_URL
+  redisUrlKey: REDIS_URL
+  optionalKeys:
+    - JEV_API_URL
+    - JEV_API_KEY
+    - GEMINI_API_KEY
+    - ANTHROPIC_API_KEY
+    - OPENAI_COMPAT_BASE_URL
+    - OPENAI_COMPAT_API_KEY
+    - WEBHOOK_SECRETS
+    - METRICS_TOKEN
+
+api:
+  replicaCount: 2
+  image:
+    repository: sdap-api
+    tag: ""
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests: { cpu: 100m, memory: 192Mi }
+    limits: { memory: 512Mi }
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  extraEnv: []
+
+worker:
+  replicaCount: 1
+  image:
+    repository: sdap-worker
+    tag: ""
+  metricsPort: 9464
+  # Runs target code in a sandbox, so give it a hardened runtime. Set to the name of a RuntimeClass
+  # backed by gVisor (runsc), e.g. "gvisor". Empty uses the cluster default runtime.
+  runtimeClassName: ""
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { memory: 4Gi }
+  # Scratch space for cloned repositories and run output.
+  runsVolume:
+    sizeLimit: 20Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  extraEnv: []
+  networkPolicy:
+    enabled: true
+    # Namespace holding the cluster DNS service.
+    dnsNamespaceLabels:
+      kubernetes.io/metadata.name: kube-system
+    # Egress to HTTPS (model APIs, git hosts) on the public internet, never to private ranges
+    # or the cloud metadata endpoint. Turn off for fully air-gapped installs with local models.
+    allowPublicHttps: true
+    publicHttpsPorts: [443]
+    # Extra raw NetworkPolicy egress rules, e.g. an external PostgreSQL or Redis CIDR:
+    #   - to: [{ ipBlock: { cidr: 10.20.0.0/24 } }]
+    #     ports: [{ protocol: TCP, port: 5432 }]
+    extraEgress: []
+    # Who may scrape the worker metrics port (namespace labels). Empty disables ingress to the worker.
+    metricsNamespaceLabels:
+      kubernetes.io/metadata.name: monitoring
+
+web:
+  replicaCount: 2
+  image:
+    repository: sdap-web
+    tag: ""
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { memory: 128Mi }
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    host: sdap.example.invalid
+    tlsSecretName: ""
+
+# PostgreSQL and Redis are external by default. The in-chart instances are for evaluation only:
+# single replica, no backups, no TLS.
+postgres:
+  enabled: false
+  image: postgres:17-alpine
+  # Existing Secret with keys POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB.
+  existingSecret: ""
+  storage: 10Gi
+  storageClassName: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+redis:
+  enabled: false
+  image: redis:7-alpine
+  storage: 2Gi
+  storageClassName: ""
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }

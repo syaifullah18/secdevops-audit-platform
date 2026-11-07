@@ -1,17 +1,18 @@
-# Multi-stage minimal egress proxy image
-FROM node:24-alpine AS base
+# SDAP egress proxy sidecar (zero dependencies).
+# Build: docker build -t sdap-egress-proxy:latest deploy/sandbox/egress-proxy
+# Pin the base image by digest in production builds.
+FROM node:24-alpine
 
 WORKDIR /app
-COPY server.js .
+COPY server.cjs .
 
+# Unprivileged; DockerSandboxRunner additionally runs it --read-only with all
+# capabilities dropped and no-new-privileges.
 USER node
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOST=0.0.0.0
+ENV NODE_ENV=production \
+    PORT=3128 \
+    HOST=0.0.0.0
 
-EXPOSE 8080
+EXPOSE 3128
 
-HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
-  CMD node -e "const http=require('http'); http.get('http://127.0.0.1:8080', res => process.exit(0)).on('error', () => process.exit(1));"
-
-ENTRYPOINT ["node", "server.js"]
+ENTRYPOINT ["node", "/app/server.cjs"]

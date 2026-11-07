@@ -106,6 +106,13 @@ Unit tests run in complete network isolation with no external LLM dependencies u
 
 ---
 
+## Metrics (WS7)
+
+`src/metrics.ts` exports `createMetrics(registry?)` with the same `sdap_*` metrics as the API, and
+`startMetricsServer(registry, { port, bearerToken? })`, a minimal HTTP server for `/metrics` and
+`/healthz` (default port 9464, `SDAP_METRICS_PORT`) because the worker has no HTTP surface of its
+own. The handles are not incremented from the pipeline yet (Phase 2). See `deploy/README.md`.
+
 ## Scripts
 
 - `pnpm build`: compile to `dist/` using TypeScript.

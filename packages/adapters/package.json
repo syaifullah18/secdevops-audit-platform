@@ -10,6 +10,14 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./contract": {
+      "source": "./test/contract.ts",
+      "default": "./test/contract.ts"
+    },
+    "./test/contract": {
+      "source": "./test/contract.ts",
+      "default": "./test/contract.ts"
     }
   },
   "files": [
@@ -22,6 +30,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sdap/core": "workspace:*"
+    "@sdap/core": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

@@ -2,8 +2,7 @@
 
 Items found during lead review and testing. Owner in brackets.
 
-- [WS9] `packages/adapters/test/http.test.ts` "retries on timeout ..." is timing-sensitive and failed
-  once under load (passed 5/5 on rerun). Make it deterministic with fake timers.
+- [done] `packages/adapters/test/http.test.ts` timeout-retry test made load-independent by the lead.
 - [WS9] Org Overview "Findings by Verification Verdict" counts only open findings, so the
   "rejected" row stays 0 even with "Show rejected findings" on (rejected findings are closed as
   `false_positive`). Count all rejected findings in that row, or relabel it.

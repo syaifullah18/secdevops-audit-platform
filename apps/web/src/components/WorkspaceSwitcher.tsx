@@ -67,7 +67,7 @@ export function WorkspaceSwitcher({
           data-testid="workspace-menu"
           className="absolute left-0 right-0 top-full mt-1 z-50 max-h-72 overflow-auto rounded-lg border border-outline-variant bg-surface-container-lowest shadow-lg p-1"
         >
-          <Link to="/" role="menuitem" className={cx(item, "font-semibold")}>
+          <Link to="/projects" role="menuitem" className={cx(item, "font-semibold")}>
             <Icon name="dashboard" className="text-base text-on-surface-variant" />
             All repositories
           </Link>

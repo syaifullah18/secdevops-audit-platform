@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext.js";
 import { Layout } from "./components/Layout.js";
 import { OrgOverviewScreen } from "./screens/OrgOverview.js";
+import { ProjectsScreen } from "./screens/Projects.js";
 import { ProjectViewScreen } from "./screens/ProjectView.js";
 import { RunTimelineScreen } from "./screens/RunTimeline.js";
 import { FindingDetailScreen } from "./screens/FindingDetail.js";
@@ -30,6 +31,7 @@ export function App() {
           >
             <Route index element={<OrgOverviewScreen />} />
             <Route path="overview" element={<OrgOverviewScreen />} />
+            <Route path="projects" element={<ProjectsScreen />} />
             <Route path="projects/:id" element={<ProjectViewScreen />} />
             <Route path="runs/:id" element={<RunTimelineScreen />} />
             <Route path="findings/:id" element={<FindingDetailScreen />} />

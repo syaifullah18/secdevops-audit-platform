@@ -34,3 +34,36 @@ describe("workspace switcher", () => {
     await waitFor(() => expect(screen.queryByTestId("workspace-menu")).toBeNull());
   });
 });
+
+import { Route, Routes } from "react-router-dom";
+import { ProjectsScreen } from "../src/screens/Projects.js";
+
+describe("projects page", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    mockStore.reset();
+    return installFetchShim(mockStore);
+  });
+  afterEach(cleanup);
+
+  it("lists every repository and the Projects nav opens it", async () => {
+    render(
+      <AppProvider>
+        <MemoryRouter initialEntries={["/projects"]}>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route path="projects" element={<ProjectsScreen />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AppProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("projects-screen")).toBeTruthy());
+    expect(screen.getByTestId("nav-projects").getAttribute("href")).toBe("/projects");
+    expect(screen.getByTestId("nav-projects").getAttribute("aria-current")).toBe("page");
+    expect(screen.getByTestId("page-title").textContent).toBe("Projects");
+    expect(
+      screen.getByTestId("projects-screen").querySelectorAll("a[href^='/projects/']").length,
+    ).toBe(mockStore.projects.length);
+  });
+});

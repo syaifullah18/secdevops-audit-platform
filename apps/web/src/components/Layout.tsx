@@ -24,6 +24,7 @@ interface NavItem {
 
 export function pageTitleFor(path: string): string {
   if (path === "/" || path === "/overview") return "Organization Overview";
+  if (path === "/projects") return "Projects";
   if (path.startsWith("/projects/")) return "Project Details";
   if (path.startsWith("/runs/")) return "Run Timeline & Diagnostics";
   if (path.startsWith("/findings/")) return "Finding Inspection & Triage";
@@ -87,7 +88,7 @@ export function Layout() {
   const nav: NavItem[] = [
     { to: "/", label: "Org Overview", icon: "dashboard", testId: "nav-overview", end: true },
     {
-      to: projects?.[0] ? `/projects/${projects[0].id}` : "/",
+      to: "/projects",
       label: "Projects",
       icon: "folder",
       testId: "nav-projects",

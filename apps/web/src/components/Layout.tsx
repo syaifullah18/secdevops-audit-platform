@@ -8,7 +8,7 @@ import { ThemeToggle } from "./ui/ThemeToggle.js";
 import { UserMenu } from "./UserMenu.js";
 import { topRole } from "../auth/session.js";
 
-const WORKSPACE = "FinTech Core Corp";
+const WORKSPACE = "Audit Workspace";
 const PROJECT_LINK = "/projects/10000000-0000-4000-8000-000000000001";
 
 interface NavItem {

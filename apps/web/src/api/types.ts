@@ -46,7 +46,7 @@ export const OrgOverviewMetricsSchema = z.object({
   openBySeverity: z.record(z.string(), z.number()),
   openByVerdict: z.record(z.string(), z.number()),
   slaBreachesCount: z.number().int().nonnegative(),
-  meanTimeToRemediateDays: z.number().nonnegative(),
+  meanTimeToRemediateDays: z.number().nonnegative().nullable(),
   crossProjectAttackClasses: z.array(
     z.object({
       attackClass: z.string(),

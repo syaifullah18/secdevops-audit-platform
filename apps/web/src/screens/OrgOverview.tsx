@@ -137,8 +137,14 @@ export function OrgOverviewScreen() {
         <Stat
           testId="metric-mttr"
           label="Mean Time to Remediate"
-          value={`${metrics.meanTimeToRemediateDays}d`}
-          sub="Average turnaround to verified fixed"
+          value={
+            metrics.meanTimeToRemediateDays === null ? "—" : `${metrics.meanTimeToRemediateDays}d`
+          }
+          sub={
+            metrics.meanTimeToRemediateDays === null
+              ? "No fixed findings yet"
+              : "Average turnaround to verified fixed"
+          }
         />
         <Stat
           testId="metric-active-projects"

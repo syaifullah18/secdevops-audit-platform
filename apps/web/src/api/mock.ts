@@ -68,6 +68,7 @@ export class MockDataStore {
     this.events = JSON.parse(JSON.stringify(FIXTURE_EVENTS));
 
     const audit = auditDataset();
+    this.usingAuditData = audit !== null;
     if (audit) {
       const policyId = this.policies[0]?.id ?? null;
       this.projects = audit.projects.map((p) => ({ ...p, policyId }));
@@ -78,6 +79,33 @@ export class MockDataStore {
       this.triageHistory = {};
       this.events = [];
     }
+  }
+
+  usingAuditData = false;
+
+  /** Average days from first seen to last seen over fixed findings; null when none are fixed. */
+  measuredMttrDays(): number | null {
+    const days = this.findings
+      .filter((f) => f.status === "fixed")
+      .map((f) => (Date.parse(f.lastSeen) - Date.parse(f.firstSeen)) / 864e5);
+    if (days.length === 0) return null;
+    return Math.round((days.reduce((a, b) => a + b, 0) / days.length) * 10) / 10;
+  }
+
+  /** One point per first-seen day, from the data itself (no invented history). */
+  measuredTrend(): { date: string; openFindings: number; resolvedFindings: number }[] {
+    const byDay = new Map<string, { open: number; fixed: number }>();
+    for (const f of this.findings) {
+      if (f.verdict === "rejected") continue;
+      const day = f.firstSeen.slice(0, 10);
+      const cur = byDay.get(day) ?? { open: 0, fixed: 0 };
+      if (f.status === "fixed") cur.fixed += 1;
+      else if (isOpenStatus(f.status)) cur.open += 1;
+      byDay.set(day, cur);
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, openFindings: v.open, resolvedFindings: v.fixed }));
   }
 
   getProjects(): Project[] {
@@ -503,15 +531,17 @@ export class MockDataStore {
       openBySeverity,
       openByVerdict,
       slaBreachesCount,
-      meanTimeToRemediateDays: 4.8,
+      meanTimeToRemediateDays: this.usingAuditData ? this.measuredMttrDays() : 4.8,
       crossProjectAttackClasses,
-      trend: [
-        { date: "2026-10-10", openFindings: 8, resolvedFindings: 1 },
-        { date: "2026-10-17", openFindings: 6, resolvedFindings: 3 },
-        { date: "2026-10-24", openFindings: 9, resolvedFindings: 5 },
-        { date: "2026-10-31", openFindings: 7, resolvedFindings: 8 },
-        { date: "2026-11-07", openFindings: openFindings.length, resolvedFindings: 11 },
-      ],
+      trend: this.usingAuditData
+        ? this.measuredTrend()
+        : [
+            { date: "2026-10-10", openFindings: 8, resolvedFindings: 1 },
+            { date: "2026-10-17", openFindings: 6, resolvedFindings: 3 },
+            { date: "2026-10-24", openFindings: 9, resolvedFindings: 5 },
+            { date: "2026-10-31", openFindings: 7, resolvedFindings: 8 },
+            { date: "2026-11-07", openFindings: openFindings.length, resolvedFindings: 11 },
+          ],
     };
   }
 }

@@ -1,14 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client.js";
 import type { Finding, Project } from "@sdap/core";
+import type { CoverageSummary } from "../api/types.js";
 import { SeverityBadge, VerdictBadge, StatusBadge } from "../components/Badges.js";
+import { Icon } from "../components/Icon.js";
+import {
+  Loading,
+  Meter,
+  PageHeader,
+  Panel,
+  Pill,
+  btn,
+  cx,
+  tableCls,
+} from "../components/stitch.js";
 import { useApp } from "../context/AppContext.js";
+
+type FrameworkId = "soc2" | "iso27001" | "pci";
+type RangeId = "all" | "30" | "90";
+type LevelId = "summary" | "detailed";
+
+const FRAMEWORKS: Array<{ id: FrameworkId; name: string; control: string; signal: string }> = [
+  {
+    id: "soc2",
+    name: "SOC 2 Type II",
+    control: "CC7.1 Vulnerability management",
+    signal: "Open confirmed findings still within SLA",
+  },
+  {
+    id: "iso27001",
+    name: "ISO 27001",
+    control: "A.8.8 Technical vulnerability management",
+    signal: "Audit coverage of code units",
+  },
+  {
+    id: "pci",
+    name: "PCI-DSS v4.0",
+    control: "Req 6.3 Vulnerabilities addressed",
+    signal: "Confirmed high or critical findings fixed",
+  },
+];
 
 export function AuditExportScreen() {
   const { showRejected } = useApp();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
-  const [findings, setFindings] = useState<Finding[]>([]);
+  const [allFindings, setAllFindings] = useState<Finding[]>([]);
+  const [coverages, setCoverages] = useState<CoverageSummary[]>([]);
+  const [framework, setFramework] = useState<FrameworkId>("soc2");
+  const [range, setRange] = useState<RangeId>("all");
+  const [level, setLevel] = useState<LevelId>("detailed");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,9 +65,11 @@ export function AuditExportScreen() {
             limit: 500,
           }),
         ]);
+        const covs = await Promise.all(projs.map((pr) => api.getCoverage(pr.id).catch(() => null)));
         if (mounted) {
           setProjects(projs);
-          setFindings(fPage.items);
+          setAllFindings(fPage.items);
+          setCoverages(covs.filter((c): c is CoverageSummary => c !== null));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -37,6 +80,13 @@ export function AuditExportScreen() {
       mounted = false;
     };
   }, [selectedProjectId, showRejected]);
+
+  // Date range filters on first-seen; exports and preview all use the scoped list.
+  const findings = useMemo(() => {
+    if (range === "all") return allFindings;
+    const cutoff = Date.now() - Number(range) * 86_400_000;
+    return allFindings.filter((f) => new Date(f.firstSeen).getTime() >= cutoff);
+  }, [allFindings, range]);
 
   // Client-side CSV generator
   const downloadCsv = () => {
@@ -96,6 +146,7 @@ export function AuditExportScreen() {
     let md = `# SecDevOps Security Audit Report\n\n`;
     md += `Generated: ${new Date().toISOString()}\n`;
     md += `Scope: ${selectedProjectId === "all" ? "All Projects" : selectedProjectId}\n`;
+    md += `Framing: ${FRAMEWORKS.find((f) => f.id === framework)?.name} (indicative evidence, not a compliance determination)\n`;
     md += `Total Findings: ${findings.length}\n\n`;
 
     md += `## Executive Summary\n\n`;
@@ -154,196 +205,295 @@ export function AuditExportScreen() {
     window.print();
   };
 
-  return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-      data-testid="audit-export-screen"
-    >
-      {/* Controls Card */}
-      <div className="card no-print">
-        <div className="card-header">
-          <div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-              Export Compliance Audit Reports
-            </h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "2px" }}>
-              Export findings in client compliance formats (Markdown, CSV, or PDF via print
-              stylesheet)
-            </p>
-          </div>
+  const fw = FRAMEWORKS.find((f) => f.id === framework) ?? FRAMEWORKS[0]!;
+  const confirmed = findings.filter((f) => f.verdict === "confirmed");
+  const openConfirmed = confirmed.filter(
+    (f) => f.status !== "fixed" && f.status !== "false_positive",
+  );
+  const withinSla = openConfirmed.filter(
+    (f) => !f.slaDue || new Date(f.slaDue).getTime() >= Date.now(),
+  );
+  const serious = confirmed.filter(
+    (f) => f.verifiedSeverity === "critical" || f.verifiedSeverity === "high",
+  );
+  const seriousFixed = serious.filter((f) => f.status === "fixed");
+  const pct = (n: number, d: number) => (d === 0 ? 100 : Math.round((n / d) * 100));
+  const coveragePct = coverages.length
+    ? Math.round(coverages.reduce((n, c) => n + c.coveragePct, 0) / coverages.length)
+    : 0;
+  const signal: Record<FrameworkId, number> = {
+    soc2: pct(withinSla.length, openConfirmed.length),
+    iso27001: coveragePct,
+    pci: pct(seriousFixed.length, serious.length),
+  };
+  const scopeName =
+    selectedProjectId === "all"
+      ? "All Projects"
+      : (projects.find((pr) => pr.id === selectedProjectId)?.name ?? selectedProjectId);
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={downloadCsv}
-              data-testid="export-csv-button"
-            >
-              📊 Export CSV
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={downloadMarkdown}
-              data-testid="export-md-button"
-            >
-              📝 Export Markdown
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={printPdf}
-              data-testid="export-pdf-button"
-            >
-              🖨️ Print / Save as PDF
-            </button>
-          </div>
-        </div>
+  return (
+    <div className="flex flex-col gap-6" data-testid="audit-export-screen">
+      <div className="print:hidden flex flex-col gap-6">
+        <PageHeader
+          title="Export Compliance Audit Reports"
+          subtitle="Export findings as Markdown, CSV, or PDF through the print stylesheet."
+          actions={
+            <>
+              <button
+                type="button"
+                className={btn.secondary}
+                onClick={downloadCsv}
+                data-testid="export-csv-button"
+              >
+                <Icon name="table_chart" className="text-[16px]" />
+                Export CSV
+              </button>
+              <button
+                type="button"
+                className={btn.secondary}
+                onClick={downloadMarkdown}
+                data-testid="export-md-button"
+              >
+                <Icon name="description" className="text-[16px]" />
+                Export Markdown
+              </button>
+              <button
+                type="button"
+                className={btn.primary}
+                onClick={printPdf}
+                data-testid="export-pdf-button"
+              >
+                <Icon name="picture_as_pdf" className="text-[16px]" />
+                Export PDF
+              </button>
+            </>
+          }
+        />
 
         <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            alignItems: "center",
-            flexWrap: "wrap",
-            marginTop: "8px",
-          }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          role="radiogroup"
+          aria-label="Compliance framework"
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label
-              htmlFor="export-project-select"
-              className="form-label"
-              style={{ marginBottom: 0 }}
-            >
-              Filter Project:
-            </label>
-            <select
-              id="export-project-select"
-              className="form-select"
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              data-testid="export-project-select"
-            >
-              <option value="all">All Projects</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.slug})
-                </option>
-              ))}
-            </select>
-          </div>
-          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-            Selected scope includes <strong>{findings.length}</strong> findings.
-          </span>
+          {FRAMEWORKS.map((f) => {
+            const on = f.id === framework;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setFramework(f.id)}
+                data-testid={`framework-${f.id}`}
+                className={cx(
+                  "text-left rounded-lg border p-4 shadow-sm transition-colors bg-surface-container-lowest",
+                  on
+                    ? "border-on-surface ring-1 ring-on-surface"
+                    : "border-outline-variant/60 hover:border-outline",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">{f.name}</span>
+                  {on && <Icon name="check_circle" filled className="text-lg" />}
+                </div>
+                <div className="text-[11px] text-on-surface-variant mt-0.5">{f.control}</div>
+                <div className="mt-3 flex items-baseline justify-between">
+                  <span className="text-2xl font-bold font-headline">{signal[f.id]}%</span>
+                  <span className="text-[11px] text-on-surface-variant text-right max-w-[60%]">
+                    {f.signal}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <Meter pct={signal[f.id]} label={`${f.name} signal`} />
+                </div>
+              </button>
+            );
+          })}
         </div>
+        <p className="text-[11px] text-on-surface-variant -mt-3">
+          Indicative evidence signals computed from this scope. They are not a compliance
+          determination or an auditor's opinion.
+        </p>
+
+        <Panel title="Scope Configuration" testId="scope-card">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <label className="flex flex-col gap-1.5" htmlFor="export-project-select">
+              <span className="font-medium text-on-surface-variant">Repository</span>
+              <select
+                id="export-project-select"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                data-testid="export-project-select"
+                className="rounded-md border border-outline-variant/60 bg-surface-container-lowest px-2 py-1.5"
+              >
+                <option value="all">All Projects</option>
+                {projects.map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    {pr.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5" htmlFor="export-range-select">
+              <span className="font-medium text-on-surface-variant">Date range (first seen)</span>
+              <select
+                id="export-range-select"
+                value={range}
+                onChange={(e) => setRange(e.target.value as RangeId)}
+                data-testid="export-range-select"
+                className="rounded-md border border-outline-variant/60 bg-surface-container-lowest px-2 py-1.5"
+              >
+                <option value="all">All time</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5" htmlFor="export-level-select">
+              <span className="font-medium text-on-surface-variant">Report level</span>
+              <select
+                id="export-level-select"
+                value={level}
+                onChange={(e) => setLevel(e.target.value as LevelId)}
+                data-testid="export-level-select"
+                className="rounded-md border border-outline-variant/60 bg-surface-container-lowest px-2 py-1.5"
+              >
+                <option value="summary">Summary (registry only)</option>
+                <option value="detailed">Detailed (with evidence traces)</option>
+              </select>
+            </label>
+          </div>
+          <p className="mt-3 text-xs text-on-surface-variant">
+            Selected scope includes <strong className="text-on-surface">{findings.length}</strong>{" "}
+            findings.
+          </p>
+        </Panel>
       </div>
 
-      {/* Printable Report View (Visible in print and on screen) */}
-      <div className="card" data-testid="printable-report-card">
-        <div
-          style={{
-            borderBottom: "2px solid var(--border)",
-            paddingBottom: "16px",
-            marginBottom: "20px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h1 style={{ fontSize: "1.5rem", fontWeight: 800 }}>
+      {loading ? (
+        <Loading>Compiling audit ledger...</Loading>
+      ) : (
+        <Panel testId="printable-report-card" title="Live Document Preview">
+          <article className="flex flex-col gap-6">
+            <header className="border-b border-outline-variant/40 pb-4">
+              <h1 className="text-2xl font-extrabold font-headline">
                 SecDevOps Security Audit Report
               </h1>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                Autonomous Verification Engine · Cloudflare security-audit-skill
-              </p>
-            </div>
-            <div style={{ textAlign: "right", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              <div>Date: {new Date().toLocaleDateString()}</div>
-              <div>Report ID: RPT-{new Date().getTime().toString().slice(-6)}</div>
-            </div>
-          </div>
-        </div>
+              <div className="mt-1 text-xs text-on-surface-variant flex flex-wrap gap-x-4 gap-y-1">
+                <span>Generated: {new Date().toLocaleString()}</span>
+                <span>Scope: {scopeName}</span>
+                <span>Framing: {fw.name}</span>
+              </div>
+            </header>
 
-        {loading ? (
-          <div>Loading export dataset...</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* Table of Findings */}
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Verified Severity</th>
-                    <th>Hunter Severity</th>
-                    <th>Verdict</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {findings.map((f) => (
-                    <tr key={f.id}>
-                      <td>
-                        <SeverityBadge severity={f.verifiedSeverity} />
-                      </td>
-                      <td>
-                        <SeverityBadge severity={f.originalSeverity} />
-                      </td>
-                      <td>
-                        <VerdictBadge verdict={f.verdict} />
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{f.title}</td>
-                      <td>
-                        <StatusBadge status={f.status} />
-                      </td>
-                      <td>
-                        <code>
-                          {f.location.file}:{f.location.line}
-                        </code>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Detailed print listing */}
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px" }}
-            >
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Finding Evidence Traces</h3>
-              {findings.map((f) => (
-                <div
-                  key={f.id}
-                  style={{
-                    padding: "12px",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    breakInside: "avoid",
-                  }}
-                >
+            <section>
+              <h2 className="text-base font-semibold mb-2">Executive Summary</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {[
+                  ["Confirmed", confirmed.length, "verified"],
+                  [
+                    "Critical",
+                    findings.filter((f) => f.verifiedSeverity === "critical").length,
+                    "critical",
+                  ],
+                  ["High", findings.filter((f) => f.verifiedSeverity === "high").length, "high"],
+                  [
+                    "Needs validation (advisory)",
+                    findings.filter((f) => f.verdict === "needs_validation").length,
+                    "advisory",
+                  ],
+                ].map(([label, n, tone]) => (
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "6px",
-                    }}
+                    key={String(label)}
+                    className="rounded-md border border-outline-variant/50 bg-surface-container-low p-3"
                   >
-                    <strong>{f.title}</strong>
-                    <span>
-                      <code>{f.fingerprint}</code>
-                    </span>
+                    <div className="text-on-surface-variant">{label}</div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xl font-bold font-mono">{n}</span>
+                      <Pill tone={tone as "verified" | "critical" | "high" | "advisory"}>
+                        {String(label).split(" ")[0]}
+                      </Pill>
+                    </div>
                   </div>
-                  <p style={{ fontSize: "0.85rem", marginBottom: "8px" }}>{f.description}</p>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                    Trace steps: {f.trace.map((t) => `${t.kind} (${t.file}:${t.line})`).join(" → ")}
-                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-base font-semibold mb-2">Findings Registry</h2>
+              <div className={tableCls.wrap}>
+                <table className={tableCls.table}>
+                  <thead>
+                    <tr className={tableCls.headRow}>
+                      {[
+                        "Verified Severity",
+                        "Hunter Severity",
+                        "Verdict",
+                        "Title",
+                        "Status",
+                        "Location",
+                      ].map((h) => (
+                        <th key={h} className={tableCls.th}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {findings.map((f) => (
+                      <tr key={f.id} className={tableCls.row}>
+                        <td className={tableCls.td}>
+                          <SeverityBadge severity={f.verifiedSeverity} />
+                        </td>
+                        <td className={tableCls.td}>
+                          <SeverityBadge severity={f.originalSeverity} />
+                        </td>
+                        <td className={tableCls.td}>
+                          <VerdictBadge verdict={f.verdict} />
+                        </td>
+                        <td className={`${tableCls.td} font-semibold`}>{f.title}</td>
+                        <td className={tableCls.td}>
+                          <StatusBadge status={f.status} />
+                        </td>
+                        <td className={`${tableCls.td} font-mono`}>
+                          {f.location.file}:{f.location.line}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {level === "detailed" && (
+              <section>
+                <h3 className="text-base font-semibold mb-2">Finding Evidence Traces</h3>
+                <div className="flex flex-col gap-4">
+                  {findings.map((f) => (
+                    <div key={f.id} className="rounded-md border border-outline-variant/50 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-sm font-semibold">{f.title}</h4>
+                        <code className="text-[11px] font-mono text-on-surface-variant">
+                          {f.fingerprint}
+                        </code>
+                      </div>
+                      <p className="mt-1 text-xs text-on-surface-variant">{f.description}</p>
+                      <ol className="mt-2 flex flex-col gap-1 text-xs font-mono">
+                        {f.trace.map((step, i) => (
+                          <li key={i}>
+                            <span className="uppercase text-on-surface-variant">{step.kind}</span>{" "}
+                            {step.file}:{step.line}{" "}
+                            <span className="text-on-surface-variant">({step.scope})</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+              </section>
+            )}
+          </article>
+        </Panel>
+      )}
     </div>
   );
 }

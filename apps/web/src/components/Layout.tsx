@@ -112,7 +112,7 @@ export function Layout() {
       {/* Fixed docked sidebar */}
       <aside
         aria-label="Main Navigation"
-        className="fixed top-0 left-0 h-screen w-64 z-40 flex flex-col justify-between p-4 bg-surface-container-lowest border-r border-outline-variant"
+        className="print:hidden fixed top-0 left-0 h-screen w-64 z-40 flex flex-col justify-between p-4 bg-surface-container-lowest border-r border-outline-variant"
       >
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-3 px-1 pt-1">
@@ -223,8 +223,8 @@ export function Layout() {
       </aside>
 
       {/* Canvas, offset by the sidebar */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen min-w-0">
-        <header className="sticky top-0 z-30 w-full px-6 py-2.5 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/50 flex items-center justify-between gap-4">
+      <div className="flex-1 ml-64 print:ml-0 flex flex-col min-h-screen min-w-0">
+        <header className="print:hidden sticky top-0 z-30 w-full px-6 py-2.5 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/50 flex items-center justify-between gap-4">
           <div className="flex items-center gap-6 min-w-0">
             <button
               type="button"

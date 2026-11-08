@@ -1,10 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
-import type { Finding, Project } from "@sdap/core";
+import type { Finding, Project, Severity } from "@sdap/core";
 import type { OrgOverviewMetrics } from "../api/types.js";
 import { SeverityBadge, VerdictBadge } from "../components/Badges.js";
+import { Icon } from "../components/Icon.js";
+import {
+  ErrorBanner,
+  Loading,
+  Meter,
+  PageHeader,
+  Panel,
+  Pill,
+  Stat,
+  btn,
+  severityTone,
+  tableCls,
+} from "../components/stitch.js";
 import { useApp } from "../context/AppContext.js";
+
+const SEVERITIES: readonly Severity[] = ["critical", "high", "medium", "low", "informational"];
+const SEV_BAR: Record<Severity, string> = {
+  critical: "bg-sev-critical-ink",
+  high: "bg-sev-high-ink",
+  medium: "bg-sev-medium-ink",
+  low: "bg-sev-low-ink",
+  informational: "bg-outline",
+};
+
+/** Heat cell colour for the attack-class matrix, by count. */
+const heat = (n: number): string => {
+  if (n <= 0) return "text-outline";
+  if (n === 1) return "bg-surface-container-high text-on-surface";
+  if (n === 2) return "bg-sev-medium-bg text-sev-medium-ink border border-sev-medium-border";
+  return "bg-sev-critical-bg text-sev-critical-ink border border-sev-critical-border font-bold";
+};
 
 export function OrgOverviewScreen() {
   const { showRejected } = useApp();
@@ -30,9 +60,7 @@ export function OrgOverviewScreen() {
           setFindings(fPage.items);
         }
       } catch (err: unknown) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : "Failed to load overview");
-        }
+        if (mounted) setError(err instanceof Error ? err.message : "Failed to load overview");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -43,316 +71,265 @@ export function OrgOverviewScreen() {
     };
   }, [showRejected]);
 
-  if (loading) {
-    return <div data-testid="loading-indicator">Loading organization security posture...</div>;
-  }
-
-  if (error || !metrics) {
-    return (
-      <div role="alert" style={{ color: "var(--critical)" }}>
-        Error loading overview: {error}
-      </div>
-    );
-  }
+  if (loading) return <Loading>Loading organization security posture...</Loading>;
+  if (error || !metrics) return <ErrorBanner>Error loading overview: {error}</ErrorBanner>;
 
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   const slaBreaches = findings.filter((f) => f.slaDue && new Date(f.slaDue).getTime() < Date.now());
+  const confirmed = metrics.openByVerdict["confirmed"] ?? 0;
+  const advisory = metrics.openByVerdict["needs_validation"] ?? 0;
+  const rejected = metrics.openByVerdict["rejected"] ?? 0;
+  const maxTrend = Math.max(
+    1,
+    ...metrics.trend.flatMap((p) => [p.openFindings, p.resolvedFindings]),
+  );
+
+  const perProject = projects.map((p) => {
+    const own = findings.filter((f) => f.projectId === p.id && f.verdict === "confirmed");
+    const bySev = (s: Severity) => own.filter((f) => f.verifiedSeverity === s).length;
+    const crit = bySev("critical");
+    const high = bySev("high");
+    // Posture is derived from confirmed findings only; advisory leads never lower it.
+    const score = Math.max(0, 100 - crit * 30 - high * 15 - (own.length - crit - high) * 5);
+    return { p, open: own.length, crit, high, score };
+  });
+  const grade = (n: number) =>
+    n >= 90 ? "A" : n >= 75 ? "B" : n >= 60 ? "C" : n >= 40 ? "D" : "F";
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-      data-testid="org-overview-screen"
-    >
-      {/* Top Metrics Cards */}
-      <div className="metrics-grid">
-        <div className="metric-card" data-testid="metric-open-findings">
-          <span className="metric-label">Open Findings</span>
-          <span className="metric-value">{metrics.totalOpenFindings}</span>
-          <span className="metric-sub">Across all audited active projects</span>
-        </div>
+    <div className="flex flex-col gap-6" data-testid="org-overview-screen">
+      <PageHeader
+        title="Organization Security Posture"
+        subtitle="Deterministic findings gate releases; System 1 advisory leads never do."
+        actions={
+          <Pill tone="verified" icon="sync">
+            {projects.length} repositories synced
+          </Pill>
+        }
+      />
 
-        <div className="metric-card" data-testid="metric-sla-breaches">
-          <span className="metric-label">SLA Breaches</span>
-          <span
-            className="metric-value"
-            style={{ color: metrics.slaBreachesCount > 0 ? "var(--critical)" : "inherit" }}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Stat
+          testId="metric-open-findings"
+          label="Open Findings"
+          value={metrics.totalOpenFindings}
+          sub={
+            <span className="flex flex-wrap gap-1.5 mt-1.5">
+              <Pill tone="verified" icon="verified">
+                {confirmed} deterministic
+              </Pill>
+              <Pill tone="advisory" icon="auto_awesome">
+                {advisory} advisory
+              </Pill>
+            </span>
+          }
+        />
+        <Stat
+          testId="metric-sla-breaches"
+          label="SLA Breaches"
+          value={metrics.slaBreachesCount}
+          valueClassName={metrics.slaBreachesCount > 0 ? "!text-sev-critical-ink" : ""}
+          sub="Findings past SLA due date"
+          right={
+            metrics.slaBreachesCount > 0 ? (
+              <Icon name="warning" className="text-sev-critical-ink text-[18px]" />
+            ) : undefined
+          }
+        />
+        <Stat
+          testId="metric-mttr"
+          label="Mean Time to Remediate"
+          value={`${metrics.meanTimeToRemediateDays}d`}
+          sub="Average turnaround to verified fixed"
+        />
+        <Stat
+          testId="metric-active-projects"
+          label="Audited Projects"
+          value={projects.length}
+          sub="Monitored repositories"
+        />
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <Panel
+            testId="cross-project-attack-class"
+            title="Cross-Project Attack Class Distribution"
+            subtitle="Heatmap view of vulnerability classes across all audited services"
           >
-            {metrics.slaBreachesCount}
-          </span>
-          <span className="metric-sub">Findings past SLA due date</span>
-        </div>
+            <div className={tableCls.wrap}>
+              <table className={tableCls.table}>
+                <thead>
+                  <tr className={tableCls.headRow}>
+                    <th className={tableCls.th}>Attack Class</th>
+                    <th className={tableCls.th}>Total Issues</th>
+                    {projects.map((p) => (
+                      <th key={p.id} className={tableCls.th}>
+                        <Link className="hover:underline" to={`/projects/${p.id}`}>
+                          {p.slug}
+                        </Link>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.crossProjectAttackClasses.map((ac) => (
+                    <tr key={ac.attackClass} className={tableCls.row}>
+                      <td className={`${tableCls.td} font-semibold text-on-surface`}>
+                        {ac.attackClass}
+                      </td>
+                      <td className={`${tableCls.td} font-mono`}>{ac.count}</td>
+                      {projects.map((p) => {
+                        const n = ac.byProject[p.id] || 0;
+                        return (
+                          <td key={p.id} className={tableCls.td}>
+                            <span
+                              className={`inline-flex min-w-7 justify-center rounded px-1.5 py-0.5 font-mono text-[11px] ${heat(n)}`}
+                            >
+                              {n > 0 ? n : "-"}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
 
-        <div className="metric-card" data-testid="metric-mttr">
-          <span className="metric-label">Mean Time to Remediate</span>
-          <span className="metric-value">{metrics.meanTimeToRemediateDays}d</span>
-          <span className="metric-sub">Average turnaround to verified fixed</span>
-        </div>
-
-        <div className="metric-card" data-testid="metric-active-projects">
-          <span className="metric-label">Audited Projects</span>
-          <span className="metric-value">{projects.length}</span>
-          <span className="metric-sub">Monitored repositories</span>
-        </div>
-      </div>
-
-      {/* Breakdowns by Severity and Verdict */}
-      <div className="side-by-side">
-        <div className="card">
-          <h3 className="card-title">Open Findings by Verified Severity</h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-            Authoritative severity determined post-validation (System 2)
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {(["critical", "high", "medium", "low", "informational"] as const).map((sev) => {
-              const count = metrics.openBySeverity[sev] || 0;
-              const pct =
-                metrics.totalOpenFindings > 0 ? (count / metrics.totalOpenFindings) * 100 : 0;
-              return (
-                <div key={sev} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <SeverityBadge severity={sev} />
-                    </span>
-                    <strong>{count}</strong>
-                  </div>
-                  <div
-                    style={{
-                      height: "6px",
-                      backgroundColor: "var(--surface-raised)",
-                      borderRadius: "3px",
-                      overflow: "hidden",
-                    }}
-                  >
+          <Panel
+            testId="trend-chart-card"
+            title="Findings Trend Over Time"
+            subtitle="Weekly rolling volume of open vs remediated vulnerabilities"
+            actions={
+              <div className="flex items-center gap-3 text-[11px] text-on-surface-variant">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-sev-critical-ink" /> Open Findings
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-verified-ink" /> Resolved Findings
+                </span>
+              </div>
+            }
+          >
+            <div className="flex items-end gap-6 h-40">
+              {metrics.trend.map((point) => (
+                <div key={point.date} className="flex-1 flex flex-col items-center gap-2 h-full">
+                  <div className="flex items-end gap-1 flex-1 w-full justify-center">
                     <div
-                      style={{ width: `${pct}%`, height: "100%", backgroundColor: `var(--${sev})` }}
+                      title={`Open: ${point.openFindings}`}
+                      className="w-5 rounded-t bg-sev-critical-ink"
+                      style={{ height: `${(point.openFindings / maxTrend) * 100}%` }}
+                    />
+                    <div
+                      title={`Resolved: ${point.resolvedFindings}`}
+                      className="w-5 rounded-t bg-verified-ink"
+                      style={{ height: `${(point.resolvedFindings / maxTrend) * 100}%` }}
                     />
                   </div>
+                  <span className="text-[11px] font-mono text-on-surface-variant">
+                    {point.date.slice(5)}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </Panel>
         </div>
 
-        <div className="card">
-          <h3 className="card-title">Findings by Verification Verdict</h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-            System 2 consensus status (
-            {showRejected ? "including rejected" : "rejected candidates hidden"})
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {(["confirmed", "needs_validation", "rejected"] as const).map((verdict) => {
-              const count = metrics.openByVerdict[verdict] || 0;
-              return (
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <Panel
+            title="Open Findings by Verified Severity"
+            subtitle="Authoritative severity determined post-validation (System 2)"
+          >
+            <div className="flex flex-col gap-3">
+              {SEVERITIES.map((sev) => {
+                const count = metrics.openBySeverity[sev] || 0;
+                const pct =
+                  metrics.totalOpenFindings > 0 ? (count / metrics.totalOpenFindings) * 100 : 0;
+                return (
+                  <div key={sev} className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <SeverityBadge severity={sev} />
+                      <span className="font-mono text-xs font-bold text-on-surface">{count}</span>
+                    </div>
+                    <Meter pct={pct} barClassName={SEV_BAR[sev]} label={`${sev} share`} />
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Findings by Verification Verdict"
+            subtitle={`System 2 consensus status (${showRejected ? "including rejected" : "rejected candidates hidden"})`}
+          >
+            <div className="flex flex-col gap-2">
+              {(
+                [
+                  ["confirmed", confirmed, "Proved vulnerabilities", "Deterministic"],
+                  ["needs_validation", advisory, "Pending sandbox/verifier proof", "Advisory"],
+                  ["rejected", rejected, "Refuted candidate leads", "Ignored"],
+                ] as const
+              ).map(([verdict, count, text]) => (
                 <div
                   key={verdict}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 14px",
-                    backgroundColor: "var(--surface-raised)",
-                    borderRadius: "var(--radius)",
-                  }}
+                  className="flex items-center justify-between rounded-md bg-surface-container-low border border-outline-variant/40 px-3 py-2.5"
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="flex flex-col gap-1">
                     <VerdictBadge verdict={verdict} />
-                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                      {verdict === "confirmed" && "Proved vulnerabilities"}
-                      {verdict === "needs_validation" && "Pending sandbox/verifier proof"}
-                      {verdict === "rejected" && "Refuted candidate leads"}
-                    </span>
+                    <span className="text-[11px] text-on-surface-variant">{text}</span>
                   </div>
-                  <strong style={{ fontSize: "1.1rem" }}>{count}</strong>
+                  <span className="text-lg font-bold font-mono text-on-surface">{count}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Trend Over Time */}
-      <div className="card" data-testid="trend-chart-card">
-        <h3 className="card-title">Findings Trend Over Time</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Weekly rolling volume of open vs remediated vulnerabilities
-        </p>
-        <div
-          style={{
-            height: "160px",
-            display: "flex",
-            alignItems: "flex-end",
-            gap: "24px",
-            paddingTop: "20px",
-          }}
-        >
-          {metrics.trend.map((point) => (
-            <div
-              key={point.date}
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: "100px" }}>
-                <div
-                  title={`Open: ${point.openFindings}`}
-                  style={{
-                    width: "20px",
-                    height: `${Math.min(100, point.openFindings * 10)}%`,
-                    backgroundColor: "var(--critical)",
-                    borderRadius: "3px 3px 0 0",
-                  }}
-                />
-                <div
-                  title={`Resolved: ${point.resolvedFindings}`}
-                  style={{
-                    width: "20px",
-                    height: `${Math.min(100, point.resolvedFindings * 10)}%`,
-                    backgroundColor: "var(--success)",
-                    borderRadius: "3px 3px 0 0",
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                {point.date.slice(5)}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "20px",
-            marginTop: "14px",
-            fontSize: "0.8rem",
-          }}
-        >
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span
-              style={{
-                width: "12px",
-                height: "12px",
-                backgroundColor: "var(--critical)",
-                borderRadius: "2px",
-              }}
-            />
-            Open Findings
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span
-              style={{
-                width: "12px",
-                height: "12px",
-                backgroundColor: "var(--success)",
-                borderRadius: "2px",
-              }}
-            />
-            Resolved Findings
-          </span>
-        </div>
-      </div>
-
-      {/* Cross-Project Attack Class View */}
-      <div className="card" data-testid="cross-project-attack-class">
-        <h3 className="card-title">Cross-Project Attack Class Distribution</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Heatmap view of vulnerability classes across all audited services
-        </p>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Attack Class</th>
-                <th>Total Issues</th>
-                {projects.map((p) => (
-                  <th key={p.id}>
-                    <Link to={`/projects/${p.id}`}>{p.slug}</Link>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.crossProjectAttackClasses.map((ac) => (
-                <tr key={ac.attackClass}>
-                  <td>
-                    <strong>{ac.attackClass}</strong>
-                  </td>
-                  <td>
-                    <span className="badge badge-info">{ac.count}</span>
-                  </td>
-                  {projects.map((p) => {
-                    const count = ac.byProject[p.id] || 0;
-                    return (
-                      <td key={p.id}>
-                        {count > 0 ? (
-                          <span className="badge badge-critical" style={{ fontSize: "0.75rem" }}>
-                            {count}
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--text-muted)" }}>-</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </Panel>
         </div>
       </div>
 
-      {/* SLA Breaches Table */}
       {slaBreaches.length > 0 && (
-        <div
-          className="card"
-          style={{ borderColor: "var(--critical-border)" }}
-          data-testid="sla-breaches-card"
+        <Panel
+          testId="sla-breaches-card"
+          tone="danger"
+          title={
+            <span className="flex items-center gap-2 text-sev-critical-ink">
+              <Icon name="warning" className="text-lg" />
+              Active SLA Breaches ({slaBreaches.length})
+            </span>
+          }
         >
-          <div className="card-header">
-            <h3 className="card-title" style={{ color: "var(--critical)" }}>
-              ⚠️ Active SLA Breaches ({slaBreaches.length})
-            </h3>
-          </div>
-          <div className="table-container">
-            <table className="data-table">
+          <div className={tableCls.wrap}>
+            <table className={tableCls.table}>
               <thead>
-                <tr>
-                  <th>Severity</th>
-                  <th>Title</th>
-                  <th>Project</th>
-                  <th>SLA Due</th>
-                  <th>Owner</th>
-                  <th>Action</th>
+                <tr className={tableCls.headRow}>
+                  {["Severity", "Title", "Project", "SLA Due", "Owner", "Action"].map((h) => (
+                    <th key={h} className={tableCls.th}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {slaBreaches.map((finding) => (
-                  <tr key={finding.id}>
-                    <td>
-                      <SeverityBadge severity={finding.verifiedSeverity} />
+                {slaBreaches.map((f) => (
+                  <tr key={f.id} className={tableCls.row}>
+                    <td className={tableCls.td}>
+                      <SeverityBadge severity={f.verifiedSeverity} />
                     </td>
-                    <td>
-                      <Link to={`/findings/${finding.id}`} style={{ fontWeight: 600 }}>
-                        {finding.title}
+                    <td className={`${tableCls.td} font-semibold`}>
+                      <Link className="hover:underline" to={`/findings/${f.id}`}>
+                        {f.title}
                       </Link>
                     </td>
-                    <td>{projectMap.get(finding.projectId)?.slug || finding.projectId}</td>
-                    <td style={{ color: "var(--critical)", fontWeight: 600 }}>
-                      {finding.slaDue ? new Date(finding.slaDue).toLocaleDateString() : "-"}
+                    <td className={`${tableCls.td} font-mono`}>
+                      {projectMap.get(f.projectId)?.slug || f.projectId}
                     </td>
-                    <td>{finding.owner || "Unassigned"}</td>
-                    <td>
-                      <Link to={`/findings/${finding.id}`} className="btn btn-secondary btn-sm">
+                    <td className={`${tableCls.td} font-semibold text-sev-critical-ink`}>
+                      {f.slaDue ? new Date(f.slaDue).toLocaleDateString() : "-"}
+                    </td>
+                    <td className={tableCls.td}>{f.owner || "Unassigned"}</td>
+                    <td className={tableCls.td}>
+                      <Link to={`/findings/${f.id}`} className={btn.secondary}>
                         Inspect
                       </Link>
                     </td>
@@ -361,45 +338,70 @@ export function OrgOverviewScreen() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
       )}
 
-      {/* Projects Quick Jump */}
-      <div className="card">
-        <h3 className="card-title">Audited Projects</h3>
-        <div className="table-container" style={{ marginTop: "12px" }}>
-          <table className="data-table">
+      <Panel
+        title="Repository Security Posture"
+        subtitle="Grade is computed from confirmed findings only"
+      >
+        <div className={tableCls.wrap}>
+          <table className={tableCls.table}>
             <thead>
-              <tr>
-                <th>Project Name</th>
-                <th>Repository</th>
-                <th>Team</th>
-                <th>Default Branch</th>
-                <th>Actions</th>
+              <tr className={tableCls.headRow}>
+                {[
+                  "Repository / Service",
+                  "Team",
+                  "Branch",
+                  "Confirmed Open",
+                  "Health",
+                  "Action",
+                ].map((h) => (
+                  <th key={h} className={tableCls.th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {projects.map((proj) => (
-                <tr key={proj.id}>
-                  <td>
-                    <Link to={`/projects/${proj.id}`} style={{ fontWeight: 600 }}>
-                      {proj.name}
+              {perProject.map(({ p, open, crit, high, score }) => (
+                <tr key={p.id} className={tableCls.row}>
+                  <td className={tableCls.td}>
+                    <Link to={`/projects/${p.id}`} className="font-semibold hover:underline">
+                      {p.name}
                     </Link>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                      {proj.slug}
-                    </div>
-                  </td>
-                  <td>
-                    <code style={{ fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
-                      {proj.repoUrl}
+                    <code className="block text-[11px] text-on-surface-variant font-mono">
+                      {p.repoUrl}
                     </code>
                   </td>
-                  <td>{proj.team}</td>
-                  <td>
-                    <span className="badge badge-info">{proj.defaultBranch}</span>
+                  <td className={tableCls.td}>{p.team}</td>
+                  <td className={`${tableCls.td} font-mono`}>{p.defaultBranch}</td>
+                  <td className={tableCls.td}>
+                    <span className="font-mono font-bold">{open}</span>
+                    {crit + high > 0 && (
+                      <Pill tone={severityTone(crit > 0 ? "critical" : "high")} className="ml-2">
+                        {crit} crit · {high} high
+                      </Pill>
+                    )}
                   </td>
-                  <td>
-                    <Link to={`/projects/${proj.id}`} className="btn btn-secondary btn-sm">
+                  <td className={`${tableCls.td} w-40`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold w-5">{grade(score)}</span>
+                      <Meter
+                        pct={score}
+                        label={`${p.name} health`}
+                        barClassName={
+                          score >= 75
+                            ? "bg-verified-ink"
+                            : score >= 40
+                              ? "bg-sev-medium-ink"
+                              : "bg-sev-critical-ink"
+                        }
+                      />
+                    </div>
+                  </td>
+                  <td className={tableCls.td}>
+                    <Link to={`/projects/${p.id}`} className={btn.secondary}>
                       View Project
                     </Link>
                   </td>
@@ -408,7 +410,7 @@ export function OrgOverviewScreen() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

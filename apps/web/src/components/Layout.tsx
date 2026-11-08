@@ -1,132 +1,311 @@
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { api } from "../api/client.js";
 import { useApp } from "../context/AppContext.js";
+import { CommandPaletteModal } from "./CommandPaletteModal.js";
+import { Icon } from "./Icon.js";
+import { ThemeToggle } from "./ui/ThemeToggle.js";
+
+const WORKSPACE = "FinTech Core Corp";
+const PROJECT_LINK = "/projects/10000000-0000-4000-8000-000000000001";
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+  testId: string;
+  end?: boolean;
+  /** Extra path prefixes that keep this item highlighted (a run or finding belongs to a parent). */
+  also?: string[];
+  badge?: number;
+}
+
+export function pageTitleFor(path: string): string {
+  if (path === "/" || path === "/overview") return "Organization Overview";
+  if (path.startsWith("/projects/")) return "Project Details";
+  if (path.startsWith("/runs/")) return "Run Timeline & Diagnostics";
+  if (path.startsWith("/findings/")) return "Finding Inspection & Triage";
+  if (path === "/review-queue") return "Security Review Queue";
+  if (path === "/policy") return "Policy & Exception Controls";
+  if (path === "/release-readiness") return "Release Readiness & Gate Status";
+  if (path === "/export") return "Compliance Audit Export";
+  return "SecDevOps Audit Platform";
+}
+
+const navLinkClass = (active: boolean): string =>
+  [
+    "flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all duration-150",
+    active
+      ? "bg-surface-container-high text-on-surface font-semibold"
+      : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container",
+  ].join(" ");
 
 export function Layout() {
-  const { theme, toggleTheme, showRejected, toggleShowRejected } = useApp();
+  const { showRejected, toggleShowRejected } = useApp();
   const location = useLocation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [queueCount, setQueueCount] = useState<number | null>(null);
 
-  const getPageTitle = (path: string) => {
-    if (path === "/" || path === "/overview") return "Organization Overview";
-    if (path.startsWith("/projects/")) return "Project Details";
-    if (path.startsWith("/runs/")) return "Run Timeline & Diagnostics";
-    if (path.startsWith("/findings/")) return "Finding Inspection & Triage";
-    if (path === "/review-queue") return "Security Review Queue";
-    if (path === "/policy") return "Policy & Exception Controls";
-    if (path === "/release-readiness") return "Release Readiness & Gate Status";
-    if (path === "/export") return "Compliance Audit Export";
-    return "SecDevOps Audit Platform";
+  // The badge is informational; a failed fetch just hides it.
+  useEffect(() => {
+    let mounted = true;
+    api
+      .getReviewQueue()
+      .then((q) => {
+        if (mounted) setQueueCount(q.length);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [location.pathname]);
+
+  // ⌘K / Ctrl+K toggles the command palette from anywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+
+  const nav: NavItem[] = [
+    { to: "/", label: "Org Overview", icon: "dashboard", testId: "nav-overview", end: true },
+    {
+      to: PROJECT_LINK,
+      label: "Projects",
+      icon: "folder",
+      testId: "nav-projects",
+      also: ["/projects/", "/runs/"],
+    },
+    {
+      to: "/review-queue",
+      label: "Review Queue",
+      icon: "pending_actions",
+      testId: "nav-review-queue",
+      also: ["/findings/"],
+      badge: queueCount ?? undefined,
+    },
+    {
+      to: "/release-readiness",
+      label: "Release Readiness",
+      icon: "traffic",
+      testId: "nav-release-readiness",
+    },
+    { to: "/policy", label: "Policy & Exceptions", icon: "policy", testId: "nav-policy" },
+    { to: "/export", label: "Audit Export", icon: "download", testId: "nav-export" },
+  ];
+
+  const isActive = (item: NavItem): boolean => {
+    if (item.end) return location.pathname === item.to || location.pathname === "/overview";
+    if (location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)) return true;
+    return (item.also ?? []).some((p) => location.pathname.startsWith(p));
   };
 
   return (
-    <div className="app-layout">
-      {/* Sidebar Navigation */}
-      <aside className="sidebar" aria-label="Main Navigation">
-        <div className="sidebar-header">
-          <div className="sidebar-title">
-            <span role="img" aria-label="Shield">
-              🛡️
-            </span>
-            <span>SecDevOps Audit</span>
+    <div className="sdap-shell min-h-screen flex">
+      {/* Fixed docked sidebar */}
+      <aside
+        aria-label="Main Navigation"
+        className="fixed top-0 left-0 h-screen w-64 z-40 flex flex-col justify-between p-4 bg-surface-container-lowest border-r border-outline-variant"
+      >
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3 px-1 pt-1">
+            <div className="h-9 w-9 rounded-lg bg-zinc-900 text-white flex items-center justify-center shadow-sm">
+              <Icon name="security" filled className="text-lg" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-headline text-base font-bold text-on-surface tracking-tight leading-tight">
+                SecDevOps Audit
+              </span>
+              <span className="text-xs text-on-surface-variant font-medium">Enterprise Tier</span>
+            </div>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-            v0.1.0 · Autonomous Audit Platform
-          </div>
-        </div>
 
-        <nav className="sidebar-nav">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-overview"
-          >
-            📊 Org Overview
-          </NavLink>
-          <NavLink
-            to="/projects/10000000-0000-4000-8000-000000000001"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-projects"
-          >
-            📁 Projects
-          </NavLink>
-          <NavLink
-            to="/review-queue"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-review-queue"
-          >
-            🔍 Review Queue
-          </NavLink>
-          <NavLink
-            to="/release-readiness"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-release-readiness"
-          >
-            🚦 Release Readiness
-          </NavLink>
-          <NavLink
-            to="/policy"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-policy"
-          >
-            📜 Policy & Exceptions
-          </NavLink>
-          <NavLink
-            to="/export"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            data-testid="nav-export"
-          >
-            📥 Audit Export
-          </NavLink>
-        </nav>
-
-        <div className="sidebar-footer">
           <button
             type="button"
-            onClick={toggleTheme}
-            className="theme-toggle-btn"
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-            data-testid="theme-toggle-button"
+            className="w-full flex items-center justify-between px-3 py-2 bg-surface-container-low border border-outline-variant/50 rounded-lg text-left hover:bg-surface-container transition-colors"
+            aria-label="Switch workspace"
           >
-            {theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
+            <span className="flex items-center gap-2.5 overflow-hidden">
+              <Icon name="domain" className="text-on-surface-variant text-lg" />
+              <span className="truncate">
+                <span className="block text-xs font-semibold text-on-surface truncate">
+                  {WORKSPACE}
+                </span>
+                <span className="block text-[11px] text-on-surface-variant">
+                  5 Repositories Active
+                </span>
+              </span>
+            </span>
+            <Icon name="unfold_more" className="text-on-surface-variant text-base" />
           </button>
+
+          <nav className="flex flex-col gap-1 text-sm font-medium" aria-label="Primary">
+            {nav.map((item) => {
+              const active = isActive(item);
+              return (
+                <NavLink
+                  key={item.testId}
+                  to={item.to}
+                  end={item.end}
+                  data-testid={item.testId}
+                  aria-current={active ? "page" : undefined}
+                  className={navLinkClass(active)}
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon name={item.icon} filled={active} className="text-[19px]" />
+                    <span>{item.label}</span>
+                  </span>
+                  {item.badge !== undefined && (
+                    <span
+                      data-testid="nav-review-queue-count"
+                      className="bg-surface-container-high text-on-surface-variant text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/40">
+          <NavLink
+            to="/export"
+            className="w-full bg-on-surface text-surface-container-lowest hover:opacity-90 font-medium text-xs py-2 px-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-all"
+            data-testid="generate-report-button"
+          >
+            <Icon name="auto_awesome" className="text-sm" />
+            <span>Generate Report</span>
+          </NavLink>
+
+          <div className="flex flex-col gap-0.5 text-xs text-on-surface-variant font-medium">
+            <a
+              href="#docs"
+              onClick={(e) => e.preventDefault()}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors"
+            >
+              <Icon name="menu_book" className="text-base" />
+              <span>Documentation</span>
+            </a>
+            <a
+              href="#support"
+              onClick={(e) => e.preventDefault()}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors"
+            >
+              <Icon name="headset_mic" className="text-base" />
+              <span>Support</span>
+            </a>
+          </div>
+
+          <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface">
+                AV
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-semibold text-on-surface leading-tight truncate">
+                  Alex Vance
+                </span>
+                <span className="text-[10px] text-on-surface-variant">SecOps Lead</span>
+              </div>
+            </div>
+            <ThemeToggle testId="theme-toggle-button" />
+          </div>
         </div>
       </aside>
 
-      {/* Main Area */}
-      <div className="main-area">
-        <header className="top-bar">
-          <h1 className="top-bar-title" data-testid="page-title">
-            {getPageTitle(location.pathname)}
-          </h1>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "0.85rem",
-                color: "var(--text)",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-              title="Show or hide findings marked as rejected by verification"
+      {/* Canvas, offset by the sidebar */}
+      <div className="flex-1 ml-64 flex flex-col min-h-screen min-w-0">
+        <header className="sticky top-0 z-30 w-full px-6 py-2.5 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/50 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6 min-w-0">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              data-testid="open-command-palette"
+              aria-label="Open command palette"
+              className="relative w-80 shrink-0 text-left bg-surface-container-lowest border border-outline-variant/60 rounded-md pl-9 pr-14 py-1.5 text-xs text-on-surface-variant hover:border-outline transition-colors"
             >
-              <input
-                type="checkbox"
-                checked={showRejected}
-                onChange={toggleShowRejected}
-                data-testid="toggle-show-rejected"
+              <Icon
+                name="search"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
               />
-              <span>Show rejected findings</span>
-            </label>
+              <span>Search findings, CVEs, services...</span>
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-medium text-on-surface-variant bg-surface-container-high border border-outline-variant/70 rounded">
+                ⌘K
+              </kbd>
+            </button>
+
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs min-w-0">
+              <span className="hidden xl:inline font-medium text-on-surface-variant">
+                {WORKSPACE}
+              </span>
+              <span className="hidden xl:inline text-outline-variant">/</span>
+              <h1 className="font-semibold text-on-surface truncate" data-testid="page-title">
+                {pageTitleFor(location.pathname)}
+              </h1>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 mr-1">
+              <span
+                id="rejected-toggle-label"
+                className="text-xs text-on-surface-variant select-none"
+                title="Show or hide findings marked as rejected by verification"
+              >
+                Show Rejected Findings
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showRejected}
+                aria-labelledby="rejected-toggle-label"
+                onClick={toggleShowRejected}
+                data-testid="toggle-show-rejected"
+                className={`w-9 h-5 rounded-full relative p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-on-surface ${
+                  showRejected ? "bg-on-surface" : "bg-surface-container-highest"
+                }`}
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform ${
+                    showRejected ? "translate-x-4" : ""
+                  }`}
+                />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Notifications (1 unread)"
+              className="relative h-8 w-8 rounded-lg border border-outline-variant/60 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
+              <Icon name="notifications" className="text-[18px]" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error" />
+            </button>
+
+            <div
+              className="h-8 w-8 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface"
+              title="Alex Vance"
+            >
+              AV
+            </div>
           </div>
         </header>
 
-        <main className="page-content" id="main-content">
+        <main id="main-content" className="flex-grow max-w-7xl w-full mx-auto px-6 py-8 space-y-8">
           <Outlet />
         </main>
       </div>
+
+      <CommandPaletteModal open={paletteOpen} onClose={closePalette} />
     </div>
   );
 }

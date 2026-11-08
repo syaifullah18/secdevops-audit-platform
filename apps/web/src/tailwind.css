@@ -1,0 +1,194 @@
+/*
+ * Tailwind layer for the Stitch redesign. Preflight is deliberately NOT imported: the legacy
+ * stylesheet in index.css still styles screens that are being migrated one at a time.
+ * Only theme tokens and utilities are generated, all at build time (no CDN, no runtime fetch).
+ */
+@layer theme, legacy, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* `dark:` follows the app's own switch (AppContext sets data-theme on <html>). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  /* Stitch surface / ink palette */
+  --color-primary-fixed: #e4e1e6;
+  --color-secondary-container: #e2e2e3;
+  --color-inverse-primary: #f9f5fa;
+  --color-inverse-on-surface: #9c9d9d;
+  --color-surface-tint: #5f5e61;
+  --color-primary-fixed-dim: #d6d3d7;
+  --color-surface-variant: #dde4e5;
+  --color-on-tertiary-fixed-variant: #006544;
+  --color-tertiary-container: #69f6b8;
+  --color-on-surface: #2d3435;
+  --color-outline-variant: #acb3b4;
+  --color-on-secondary-fixed: #3e4041;
+  --color-error-dim: #4f0116;
+  --color-background: #f9f9f9;
+  --color-primary-dim: #535255;
+  --color-on-primary: #faf7fb;
+  --color-error: #9e3f4e;
+  --color-surface-bright: #f9f9f9;
+  --color-tertiary-dim: #005f40;
+  --color-secondary-fixed-dim: #d4d4d5;
+  --color-primary: #5f5e61;
+  --color-on-tertiary-container: #005a3c;
+  --color-on-tertiary-fixed: #00452d;
+  --color-outline: #757c7d;
+  --color-surface-dim: #d3dbdd;
+  --color-tertiary-fixed-dim: #58e7ab;
+  --color-secondary-dim: #525354;
+  --color-on-primary-fixed: #3f3f42;
+  --color-tertiary: #006d4a;
+  --color-surface-container-high: #e4e9ea;
+  --color-surface-container-low: #f2f4f4;
+  --color-secondary: #5e5f60;
+  --color-secondary-fixed: #e2e2e3;
+  --color-primary-container: #e4e1e6;
+  --color-surface: #f9f9f9;
+  --color-tertiary-fixed: #69f6b8;
+  --color-on-secondary-fixed-variant: #5a5c5d;
+  --color-on-error-container: #782232;
+  --color-on-tertiary: #e6ffee;
+  --color-surface-container: #ebeeef;
+  --color-on-secondary: #f9f9fa;
+  --color-on-primary-container: #525155;
+  --color-on-primary-fixed-variant: #5c5b5e;
+  --color-surface-container-highest: #dde4e5;
+  --color-on-surface-variant: #596061;
+  --color-on-error: #fff7f7;
+  --color-on-secondary-container: #505253;
+  --color-on-background: #2d3435;
+  --color-error-container: #ff8b9a;
+  --color-inverse-surface: #0c0f0f;
+  --color-surface-container-lowest: #ffffff;
+
+  /* Severity and verdict spectrum (pastel fill, border, ink) */
+  --color-sev-critical-bg: #fef2f2;
+  --color-sev-critical-border: #fecaca;
+  --color-sev-critical-ink: #991b1b;
+  --color-sev-high-bg: #fff7ed;
+  --color-sev-high-border: #fed7aa;
+  --color-sev-high-ink: #9a3412;
+  --color-sev-medium-bg: #fefce8;
+  --color-sev-medium-border: #fef08a;
+  --color-sev-medium-ink: #854d0e;
+  --color-sev-low-bg: #f0f9ff;
+  --color-sev-low-border: #bae6fd;
+  --color-sev-low-ink: #075985;
+  --color-verified-bg: #ecfdf5;
+  --color-verified-border: #a7f3d0;
+  --color-verified-ink: #065f46;
+  --color-advisory-bg: #f5f3ff;
+  --color-advisory-border: #ddd6fe;
+  --color-advisory-ink: #5b21b6;
+
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --font-headline: "Inter Variable", "Inter", sans-serif;
+  --font-display: "Inter Variable", "Inter", sans-serif;
+  --font-body: "Inter Variable", "Inter", sans-serif;
+  --font-label: "Public Sans", "Inter Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+}
+
+/*
+ * Dark theme: the same token names re-pointed, so utilities such as `bg-surface-container-low`
+ * flip with no per-element `dark:` classes. Canvas #09090b, raised #18181b, border #27272a.
+ */
+[data-theme="dark"] {
+  --color-surface: #09090b;
+  --color-surface-bright: #18181b;
+  --color-surface-dim: #09090b;
+  --color-background: #09090b;
+  --color-surface-container-lowest: #09090b;
+  --color-surface-container-low: #111113;
+  --color-surface-container: #18181b;
+  --color-surface-container-high: #202024;
+  --color-surface-container-highest: #27272a;
+  --color-surface-variant: #27272a;
+  --color-on-surface: #fafafa;
+  --color-on-background: #fafafa;
+  --color-on-surface-variant: #a1a1aa;
+  --color-outline: #52525b;
+  --color-outline-variant: #3f3f46;
+  --color-inverse-surface: #fafafa;
+  --color-inverse-on-surface: #18181b;
+  --color-primary: #d4d4d8;
+  --color-primary-container: #27272a;
+  --color-on-primary-container: #e4e4e7;
+  --color-secondary-container: #27272a;
+  --color-error: #f87171;
+  --color-error-container: #450a0a;
+  --color-on-error-container: #fecaca;
+  --color-tertiary: #34d399;
+  --color-tertiary-container: #064e3b;
+  --color-on-tertiary-container: #a7f3d0;
+
+  --color-sev-critical-bg: #2a0e10;
+  --color-sev-critical-border: #7f1d1d;
+  --color-sev-critical-ink: #fca5a5;
+  --color-sev-high-bg: #2a1708;
+  --color-sev-high-border: #7c2d12;
+  --color-sev-high-ink: #fdba74;
+  --color-sev-medium-bg: #261f06;
+  --color-sev-medium-border: #713f12;
+  --color-sev-medium-ink: #fde047;
+  --color-sev-low-bg: #082230;
+  --color-sev-low-border: #0c4a6e;
+  --color-sev-low-ink: #7dd3fc;
+  --color-verified-bg: #052e22;
+  --color-verified-border: #065f46;
+  --color-verified-ink: #6ee7b7;
+  --color-advisory-bg: #1e1538;
+  --color-advisory-border: #4c1d95;
+  --color-advisory-ink: #c4b5fd;
+}
+
+/* Canvas for the redesigned shell; legacy screens keep inheriting --bg from index.css. */
+.sdap-shell {
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+
+/* Minimal stand-in for Tailwind preflight, scoped to the shell and kept below utilities. */
+@layer legacy {
+  .sdap-shell button {
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .sdap-shell button:disabled {
+    cursor: not-allowed;
+  }
+  .sdap-shell a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sdap-shell h1,
+  .sdap-shell h2,
+  .sdap-shell h3,
+  .sdap-shell h4 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .sdap-shell table {
+    border-collapse: collapse;
+  }
+}

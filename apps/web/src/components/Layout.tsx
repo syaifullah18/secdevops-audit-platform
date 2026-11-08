@@ -6,10 +6,11 @@ import { CommandPaletteModal } from "./CommandPaletteModal.js";
 import { Icon } from "./Icon.js";
 import { ThemeToggle } from "./ui/ThemeToggle.js";
 import { UserMenu } from "./UserMenu.js";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher.js";
+import type { Project } from "@sdap/core";
 import { topRole } from "../auth/session.js";
 
 const WORKSPACE = "Audit Workspace";
-const PROJECT_LINK = "/projects/10000000-0000-4000-8000-000000000001";
 
 interface NavItem {
   to: string;
@@ -51,7 +52,7 @@ export function Layout() {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [queueCount, setQueueCount] = useState<number | null>(null);
-  const [repoCount, setRepoCount] = useState<number | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
 
   // The badge is informational; a failed fetch just hides it.
   useEffect(() => {
@@ -65,7 +66,7 @@ export function Layout() {
     api
       .getProjects()
       .then((ps) => {
-        if (mounted) setRepoCount(ps.length);
+        if (mounted) setProjects(ps);
       })
       .catch(() => undefined);
     return () => {
@@ -90,7 +91,7 @@ export function Layout() {
   const nav: NavItem[] = [
     { to: "/", label: "Org Overview", icon: "dashboard", testId: "nav-overview", end: true },
     {
-      to: PROJECT_LINK,
+      to: projects?.[0] ? `/projects/${projects[0].id}` : "/",
       label: "Projects",
       icon: "folder",
       testId: "nav-projects",
@@ -140,26 +141,7 @@ export function Layout() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-3 py-2 bg-surface-container-low border border-outline-variant/50 rounded-lg text-left hover:bg-surface-container transition-colors"
-            aria-label="Switch workspace"
-          >
-            <span className="flex items-center gap-2.5 overflow-hidden">
-              <Icon name="domain" className="text-on-surface-variant text-lg" />
-              <span className="truncate">
-                <span className="block text-xs font-semibold text-on-surface truncate">
-                  {WORKSPACE}
-                </span>
-                <span className="block text-[11px] text-on-surface-variant">
-                  {repoCount === null
-                    ? "Loading repositories…"
-                    : `${repoCount} ${repoCount === 1 ? "Repository" : "Repositories"} Active`}
-                </span>
-              </span>
-            </span>
-            <Icon name="unfold_more" className="text-on-surface-variant text-base" />
-          </button>
+          <WorkspaceSwitcher name={WORKSPACE} projects={projects} />
 
           <nav className="flex flex-col gap-1 text-sm font-medium" aria-label="Primary">
             {nav.map((item) => {

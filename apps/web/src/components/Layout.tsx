@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useApp } from "../context/AppContext.js";
 import { CommandPaletteModal } from "./CommandPaletteModal.js";
@@ -14,6 +14,7 @@ interface NavItem {
   label: string;
   icon: string;
   testId: string;
+  /** Match only the exact path (the overview), not its descendants. */
   end?: boolean;
   /** Extra path prefixes that keep this item highlighted (a run or finding belongs to a parent). */
   also?: string[];
@@ -29,6 +30,7 @@ export function pageTitleFor(path: string): string {
   if (path === "/policy") return "Policy & Exception Controls";
   if (path === "/release-readiness") return "Release Readiness & Gate Status";
   if (path === "/export") return "Compliance Audit Export";
+  if (path === "/styleguide") return "Design System";
   return "SecDevOps Audit Platform";
 }
 
@@ -150,10 +152,9 @@ export function Layout() {
             {nav.map((item) => {
               const active = isActive(item);
               return (
-                <NavLink
+                <Link
                   key={item.testId}
                   to={item.to}
-                  end={item.end}
                   data-testid={item.testId}
                   aria-current={active ? "page" : undefined}
                   className={navLinkClass(active)}
@@ -170,21 +171,21 @@ export function Layout() {
                       {item.badge}
                     </span>
                   )}
-                </NavLink>
+                </Link>
               );
             })}
           </nav>
         </div>
 
         <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/40">
-          <NavLink
+          <Link
             to="/export"
             className="w-full bg-on-surface text-surface-container-lowest hover:opacity-90 font-medium text-xs py-2 px-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-all"
             data-testid="generate-report-button"
           >
             <Icon name="auto_awesome" className="text-sm" />
             <span>Generate Report</span>
-          </NavLink>
+          </Link>
 
           <div className="flex flex-col gap-0.5 text-xs text-on-surface-variant font-medium">
             <a

@@ -23,3 +23,7 @@ Items found during lead review and testing. Owner in brackets.
   mandatory operator-set credentials for Postgres and Grafana, and Helm chart requires existingSecret.
 - [done] Gate exception revoke used a strict `>` on timestamps and missed same-millisecond
   reopens (fail-open edge case); fixed to `>=` by the lead.
+- [web] Material Symbols ships as one 4 MB variable font. Subset it to the icons in use, or inline SVGs, to cut first-load weight.
+- [web] Retire `index.css` (legacy layer) once `components/ui` primitives are re-based on Stitch tokens; no screen uses legacy classes any more.
+- [web] "Confirm and create Jira issue" and outbound Slack or PagerDuty alerts from the Stitch designs need a notifications feature that v0.1 does not have.
+- [web] Run stepper wraps with a dangling connector below about 1000 px; hide the last connector per row.

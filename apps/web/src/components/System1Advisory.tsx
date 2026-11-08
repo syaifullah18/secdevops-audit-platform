@@ -1,4 +1,4 @@
-import type { TriageSuggestion } from "@sdap/core";
+import { SEVERITY_RANK, type Severity, type TriageSuggestion } from "@sdap/core";
 import { AdvisoryBadge } from "./Badges.js";
 import { Meter } from "./stitch.js";
 
@@ -31,19 +31,21 @@ export function System1AdvisoryView({ suggestion }: { suggestion: TriageSuggesti
             <div className="text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
               Predicted severity
             </div>
-            {Object.entries(suggestion.severityBand).map(([sev, prob]) => (
-              <div key={sev} className="flex flex-col gap-1">
-                <div className="flex justify-between text-xs">
-                  <span className="capitalize">{sev}</span>
-                  <span className="font-mono font-semibold">{(prob * 100).toFixed(0)}%</span>
+            {(Object.entries(suggestion.severityBand) as Array<[Severity, number]>)
+              .sort(([a], [b]) => SEVERITY_RANK[b] - SEVERITY_RANK[a])
+              .map(([sev, prob]) => (
+                <div key={sev} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="capitalize">{sev}</span>
+                    <span className="font-mono font-semibold">{(prob * 100).toFixed(0)}%</span>
+                  </div>
+                  <Meter
+                    pct={prob * 100}
+                    barClassName="bg-advisory-ink"
+                    label={`${sev} probability`}
+                  />
                 </div>
-                <Meter
-                  pct={prob * 100}
-                  barClassName="bg-advisory-ink"
-                  label={`${sev} probability`}
-                />
-              </div>
-            ))}
+              ))}
           </div>
         )}
         {suggestion.ownerCandidates && suggestion.ownerCandidates.length > 0 && (

@@ -9,6 +9,7 @@ import { ReviewQueueScreen } from "./screens/ReviewQueue.js";
 import { PolicyViewScreen } from "./screens/PolicyView.js";
 import { ReleaseReadinessScreen } from "./screens/ReleaseReadiness.js";
 import { AuditExportScreen } from "./screens/AuditExport.js";
+import { StyleguideScreen } from "./screens/Styleguide.js";
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
             <Route path="policy" element={<PolicyViewScreen />} />
             <Route path="release-readiness" element={<ReleaseReadinessScreen />} />
             <Route path="export" element={<AuditExportScreen />} />
+            <Route path="styleguide" element={<StyleguideScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

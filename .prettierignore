@@ -9,3 +9,6 @@ docs/PRD.md
 
 # Helm templates contain Go template actions and are not valid YAML until rendered.
 deploy/helm/*/templates/
+
+# Stitch design exports are generated reference renders, kept verbatim.
+apps/web/stitch-redesign/

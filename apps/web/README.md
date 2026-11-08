@@ -101,10 +101,23 @@ The dashboard implements 8 primary views using React Router with light/dark them
 ## Global Controls & Accessibility
 
 - **Rejected Findings Toggle**: In the top navigation bar, rejected candidate leads are hidden by default per PRD 5.4. Checking "Show rejected findings" reveals refuted candidates across all tables and screens.
-- **Light / Dark Mode**: Theme switcher toggling semantic CSS variables, persisted in `localStorage`.
+- **Light / Dark Mode**: Icon toggle in the sidebar footer. Dark mode re-points the same colour tokens under `[data-theme="dark"]`, so no per-element overrides exist. Persisted in `localStorage`.
+- **Command Palette** (`⌘K` / `Ctrl+K`, or click the top-bar search): quick actions (`⌘R` audit, `⌘E` exception, `⌘P` export, `⌘D` theme) and recent confirmed or advisory findings. Arrow keys move, `Enter` runs, `Esc` closes. Rejected findings are never listed.
+- **Sandbox Replay terminal**: opened from a finding or a review-queue card. It is a **simulation**: it replays the finding's own recorded trace, executes nothing, shows no invented data, and cannot change a verdict or status.
 - **Responsive Layout**: Designed and tested for mobile devices (375px) up through widescreen displays (1280px+).
 
 ---
+
+## Design System
+
+The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference renders) on the shadcn/ui Zinc palette.
+
+- **Tokens**: `src/tailwind.css` defines the Stitch palette, the severity/verdict spectrum (`sev-*`, `verified-*`, `advisory-*`) and fonts as Tailwind v4 `@theme` tokens. Tailwind runs at **build time only**; there is no CDN.
+- **Self-hosted assets**: Inter, JetBrains Mono, Public Sans and Material Symbols come from npm packages and are bundled, so the dashboard makes no third-party requests (the platform ships no telemetry by default).
+- **Cascade**: `@layer theme, legacy, utilities`. The older stylesheet in `index.css` lives in `legacy`, below utilities, so its global reset cannot override Tailwind spacing. Tailwind's preflight is not imported; `.sdap-shell` carries a minimal reset.
+- **Primitives**: `src/components/stitch.tsx` (`Panel`, `Pill`, `Stat`, `Meter`, table and button classes). `Badges.tsx` builds on `Pill`.
+- **Styleguide**: `/styleguide` renders the real components for review.
+- **Invariants kept in the UI**: only `confirmed` findings gate; System 1 output is always badged "System 1 · Advisory"; drafts are badged "Draft · Human Review Only"; `false_positive` needs a reason and `accepted_risk` an expiry.
 
 ## Scripts & Verification
 

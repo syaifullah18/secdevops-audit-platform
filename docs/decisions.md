@@ -107,3 +107,20 @@ Consequences:
 - Worker test fakes moved out of `src/` to `test/fakes.ts` to prevent production leakage.
 - Prometheus `/metrics` mounted in `apps/api` via `systemRoutes`.
 - All workspace packages build, typecheck, lint, and test 100% green under Node 24.
+
+## D-016 Dashboard redesign: build-time Tailwind, self-hosted fonts and icons
+
+The Stitch exports load the Tailwind Play CDN, Google Fonts and the Material Symbols font at runtime. That would add third-party requests to a self-hosted product that promises no telemetry and no SaaS dependency.
+→ Tailwind v4 (`@tailwindcss/vite`) compiles at build time; Inter, JetBrains Mono, Public Sans and Material Symbols come from npm (`@fontsource*`, `material-symbols`) and are bundled.
+→ The legacy stylesheet moves into `@layer legacy` (below utilities) instead of being deleted, so screens migrate without a flag day. Dark mode overrides the colour tokens rather than adding `dark:` classes.
+Consequences: the Material Symbols font adds about 4 MB to `dist` (see follow-ups); the legacy CSS stays until the older `components/ui` primitives are re-based.
+
+## D-017 The redesign shows only what the platform can back
+
+Several Stitch panels were static mock content. Where the platform has no backing capability, the UI says so instead of imitating it:
+
+- Sandbox terminal is a labelled simulation built from the finding's trace. "Mark Verified Exploit" is omitted: only System 2 verification confirms a finding.
+- Framework cards (SOC 2, ISO 27001, PCI-DSS) show indicative signals computed from the scope (SLA adherence, audit coverage, serious findings fixed), labelled as not a compliance determination.
+- Slack, PagerDuty and Jira appear as "Not connected"; outbound notifications are not in v0.1. Inbound webhook secret status is real (`webhookSecretRef`).
+- Policy mode is shown read-only: policy is code and changes through a reviewed commit.
+- Review-queue Accept and Reject call the real triage API; Reject requires a reason, as the API does.

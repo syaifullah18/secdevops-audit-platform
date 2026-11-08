@@ -27,3 +27,4 @@ Items found during lead review and testing. Owner in brackets.
 - [web] Retire `index.css` (legacy layer) once `components/ui` primitives are re-based on Stitch tokens; no screen uses legacy classes any more.
 - [web] "Confirm and create Jira issue" and outbound Slack or PagerDuty alerts from the Stitch designs need a notifications feature that v0.1 does not have.
 - [web] Run stepper wraps with a dangling connector below about 1000 px; hide the last connector per row.
+- [web] Replace token-paste sign-in with OIDC authorization-code + PKCE (redirect, refresh, logout) so tokens are not handled by users or kept in `sessionStorage`.

@@ -119,6 +119,14 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 - **Styleguide**: `/styleguide` renders the real components for review.
 - **Invariants kept in the UI**: only `confirmed` findings gate; System 1 output is always badged "System 1 · Advisory"; drafts are badged "Draft · Human Review Only"; `false_positive` needs a reason and `accepted_risk` an expiry.
 
+## Sign-in & Session
+
+- `/login`: paste an OIDC access token for a real API (`VITE_API_BASE_URL` set). With the mock API, "Continue in demo mode" is also offered and the demo user is signed in automatically until you sign out.
+- The token lives in `sessionStorage` for the tab only and is sent as a bearer token. A 401 or token expiry signs you out. Claims are decoded for display only; the API enforces roles and client scope.
+- `/profile`: identity, roles, team, client scope, session expiry and preferences (theme, show rejected). Identity is read-only.
+- The theme control is a labelled switch (`role="switch"`) in the sidebar, login and profile.
+- Caveat: `sessionStorage` is readable by page scripts; see D-018 and the PKCE follow-up.
+
 ## Scripts & Verification
 
 | Command          | Description                                                             |

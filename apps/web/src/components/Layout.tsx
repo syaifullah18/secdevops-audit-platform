@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useApp } from "../context/AppContext.js";
 import { CommandPaletteModal } from "./CommandPaletteModal.js";
 import { Icon } from "./Icon.js";
 import { ThemeToggle } from "./ui/ThemeToggle.js";
+import { UserMenu } from "./UserMenu.js";
+import { topRole } from "../auth/session.js";
 
 const WORKSPACE = "FinTech Core Corp";
 const PROJECT_LINK = "/projects/10000000-0000-4000-8000-000000000001";
@@ -31,6 +33,7 @@ export function pageTitleFor(path: string): string {
   if (path === "/release-readiness") return "Release Readiness & Gate Status";
   if (path === "/export") return "Compliance Audit Export";
   if (path === "/styleguide") return "Design System";
+  if (path === "/profile") return "Profile & Access";
   return "SecDevOps Audit Platform";
 }
 
@@ -43,7 +46,8 @@ const navLinkClass = (active: boolean): string =>
   ].join(" ");
 
 export function Layout() {
-  const { showRejected, toggleShowRejected } = useApp();
+  const { showRejected, toggleShowRejected, user, signOut } = useApp();
+  const navigate = useNavigate();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [queueCount, setQueueCount] = useState<number | null>(null);
@@ -206,19 +210,42 @@ export function Layout() {
             </a>
           </div>
 
-          <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between gap-2 px-1">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface">
-                AV
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-on-surface leading-tight truncate">
-                  Alex Vance
-                </span>
-                <span className="text-[10px] text-on-surface-variant">SecOps Lead</span>
-              </div>
-            </div>
+          <div className="pt-2 border-t border-outline-variant/40 flex flex-col gap-3 px-1">
             <ThemeToggle testId="theme-toggle-button" />
+            {user && (
+              <div className="flex items-center justify-between gap-2">
+                <Link
+                  to="/profile"
+                  data-testid="sidebar-profile"
+                  className="flex items-center gap-2.5 min-w-0 rounded-md hover:bg-surface-container transition-colors p-1 -m-1"
+                >
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface">
+                    {user.initials}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold text-on-surface leading-tight truncate">
+                      {user.name}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant truncate">
+                      {topRole(user.roles) ?? "no role"}
+                      {user.demo ? " · demo" : ""}
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Sign out"
+                  title="Sign out"
+                  onClick={() => {
+                    signOut();
+                    navigate("/login", { replace: true });
+                  }}
+                  className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <Icon name="logout" className="text-[18px]" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -292,12 +319,7 @@ export function Layout() {
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error" />
             </button>
 
-            <div
-              className="h-8 w-8 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface"
-              title="Alex Vance"
-            >
-              AV
-            </div>
+            <UserMenu />
           </div>
         </header>
 

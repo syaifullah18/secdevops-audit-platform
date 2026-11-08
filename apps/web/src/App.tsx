@@ -10,13 +10,24 @@ import { PolicyViewScreen } from "./screens/PolicyView.js";
 import { ReleaseReadinessScreen } from "./screens/ReleaseReadiness.js";
 import { AuditExportScreen } from "./screens/AuditExport.js";
 import { StyleguideScreen } from "./screens/Styleguide.js";
+import { RequireSession } from "./auth/RequireSession.js";
+import { LoginScreen } from "./screens/Login.js";
+import { ProfileScreen } from "./screens/Profile.js";
 
 export function App() {
   return (
     <AppProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Layout />}>
+          <Route path="/login" element={<LoginScreen />} />
+          <Route
+            path="/"
+            element={
+              <RequireSession>
+                <Layout />
+              </RequireSession>
+            }
+          >
             <Route index element={<OrgOverviewScreen />} />
             <Route path="overview" element={<OrgOverviewScreen />} />
             <Route path="projects/:id" element={<ProjectViewScreen />} />
@@ -26,6 +37,7 @@ export function App() {
             <Route path="policy" element={<PolicyViewScreen />} />
             <Route path="release-readiness" element={<ReleaseReadinessScreen />} />
             <Route path="export" element={<AuditExportScreen />} />
+            <Route path="profile" element={<ProfileScreen />} />
             <Route path="styleguide" element={<StyleguideScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

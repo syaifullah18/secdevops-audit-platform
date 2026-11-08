@@ -124,3 +124,14 @@ Several Stitch panels were static mock content. Where the platform has no backin
 - Slack, PagerDuty and Jira appear as "Not connected"; outbound notifications are not in v0.1. Inbound webhook secret status is real (`webhookSecretRef`).
 - Policy mode is shown read-only: policy is code and changes through a reviewed commit.
 - Review-queue Accept and Reject call the real triage API; Reject requires a reason, as the API does.
+
+## D-018 Honest sign-in: bearer token or demo mode
+
+The API accepts only OIDC bearer JWTs, but the SPA sent none and had no sign-in or profile. Added `/login` and `/profile`, a route guard, a user menu and a theme switch.
+
+- Against a real API, the user pastes an access token. It is kept in `sessionStorage` (per tab), sent as `Authorization: Bearer`, and a 401 ends the session.
+- Under the mock API only, "Continue in demo mode" signs in a labelled demo user. The demo user is never available when `VITE_API_BASE_URL` is set.
+- The SPA decodes token claims for display only (name, roles, team, client scope, expiry). It never trusts them; the API verifies the token and enforces RBAC and client scope on every request.
+- Profile is read-only: identity and roles belong to the identity provider.
+
+Consequences: `sessionStorage` is readable by any script on the page, so an XSS would expose the token. Mitigated by the strict CSP and no third-party scripts; the proper fix is an OIDC authorization-code flow with PKCE (see follow-ups).

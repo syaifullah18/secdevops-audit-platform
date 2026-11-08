@@ -22,6 +22,7 @@ import {
   type OrgOverviewMetrics,
 } from "./types.js";
 import { mockStore } from "./mock.js";
+import { UNAUTHORIZED_EVENT, getToken } from "../auth/session.js";
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL as string) || "/api/v1";
 
@@ -35,7 +36,14 @@ async function request<T>(path: string, options?: RequestInit, schema?: z.ZodTyp
     headers.set("Content-Type", "application/json");
   }
 
+  const token = getToken();
+  if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+
   const res = await fetch(url, { ...options, headers });
+  if (res.status === 401 && token) {
+    // The API rejected the token (expired or revoked): drop the session and go to sign-in.
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+  }
   if (!res.ok) {
     let errMessage = `HTTP ${res.status}: ${res.statusText}`;
     try {

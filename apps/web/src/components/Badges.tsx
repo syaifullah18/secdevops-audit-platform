@@ -37,16 +37,16 @@ export function StatusBadge({ status }: { status: FindingStatus }) {
   return <Pill tone={STATUS_TONE[status] ?? "neutral"}>{status.replace("_", " ")}</Pill>;
 }
 
-/** System 1 (Jev) output is advisory only; it never fails a gate. */
+/** Automated suggestions are advisory only; it never fails a gate. */
 export function AdvisoryBadge() {
   return (
     <Pill
       tone="advisory"
       icon="auto_awesome"
-      title="System 1 (Jev) suggestion is non-binding advisory only"
+      title="Automated suggestion: non-binding, advisory only"
       className="uppercase tracking-wide"
     >
-      <span role="status">System 1 · Advisory</span>
+      <span role="status">AI Suggestion · Advisory</span>
     </Pill>
   );
 }

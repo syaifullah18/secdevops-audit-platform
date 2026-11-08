@@ -32,7 +32,7 @@ test.describe("SecDevOps Web Dashboard E2E Smoke Tests", () => {
     // Attribution and advisory badge
     await expect(page.getByTestId("attribution-label")).toBeVisible();
     await expect(page.getByTestId("system1-advisory")).toBeVisible();
-    await expect(page.getByText("System 1 · Advisory")).toBeVisible();
+    await expect(page.getByText("AI Suggestion · Advisory")).toBeVisible();
 
     // Fix draft viewer
     await expect(page.getByTestId("fix-draft-viewer")).toBeVisible();

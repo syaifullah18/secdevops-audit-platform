@@ -2,7 +2,7 @@ import { SEVERITY_RANK, type Severity, type TriageSuggestion } from "@sdap/core"
 import { AdvisoryBadge } from "./Badges.js";
 import { Meter } from "./stitch.js";
 
-/** System 1 (Jev) output. Advisory only: it never blocks a merge or closes a finding. */
+/** Automated triage suggestion. Advisory only: it never blocks a merge or closes a finding. */
 export function System1AdvisoryView({ suggestion }: { suggestion: TriageSuggestion | null }) {
   if (!suggestion) return null;
   return (
@@ -13,9 +13,7 @@ export function System1AdvisoryView({ suggestion }: { suggestion: TriageSuggesti
       <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
         <div className="flex items-center gap-3 flex-wrap">
           <AdvisoryBadge />
-          <h3 className="text-base font-semibold font-headline">
-            System 1 (Jev) Triage Recommendation
-          </h3>
+          <h3 className="text-base font-semibold font-headline">Triage Recommendation</h3>
         </div>
         <span className="text-[11px] font-mono text-on-surface-variant">
           {suggestion.model.adapter}/{suggestion.model.model}

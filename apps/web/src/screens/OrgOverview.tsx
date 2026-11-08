@@ -100,7 +100,7 @@ export function OrgOverviewScreen() {
     <div className="flex flex-col gap-6" data-testid="org-overview-screen">
       <PageHeader
         title="Organization Security Posture"
-        subtitle="Deterministic findings gate releases; System 1 advisory leads never do."
+        subtitle="Deterministic findings gate releases; advisory suggestions never do."
         actions={
           <Pill tone="verified" icon="sync">
             {projects.length} repositories synced
@@ -240,7 +240,7 @@ export function OrgOverviewScreen() {
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Panel
             title="Open Findings by Verified Severity"
-            subtitle="Authoritative severity determined post-validation (System 2)"
+            subtitle="Authoritative severity determined post-validation"
           >
             <div className="flex flex-col gap-3">
               {SEVERITIES.map((sev) => {
@@ -262,7 +262,7 @@ export function OrgOverviewScreen() {
 
           <Panel
             title="Findings by Verification Verdict"
-            subtitle={`System 2 consensus status (${showRejected ? "including rejected" : "rejected candidates hidden"})`}
+            subtitle={`Verification status (${showRejected ? "including rejected" : "rejected candidates hidden"})`}
           >
             <div className="flex flex-col gap-2">
               {(

@@ -143,7 +143,7 @@ export function ReleaseReadinessScreen() {
             </h3>
             <p className="text-xs mt-0.5">
               Core Principle: Only open confirmed findings can fail a release gate. Advisory leads
-              (System 1) and rejected candidates never block.
+              (AI suggestions) and rejected candidates never block.
             </p>
           </div>
         </div>

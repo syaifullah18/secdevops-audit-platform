@@ -11,7 +11,7 @@ type ColumnId = "unassigned" | "investigating" | "approval";
 
 /**
  * Column rules (all candidates here are `needs_validation`, so none can fail a gate):
- *  - Awaiting Approval: a System 1 suggestion exists and a human owns the lead, so it needs signoff.
+ *  - Awaiting Approval: an AI suggestion exists and a human owns the lead, so it needs signoff.
  *  - In Investigation: an owner is assigned or the status is in_progress.
  *  - Unassigned Triage: everything else.
  */
@@ -133,7 +133,7 @@ export function ReviewQueueScreen() {
         <p className="text-xs leading-relaxed">
           <strong>Policy invariant (PRD 5.4):</strong> candidate leads never block a merge or fail a
           gate on their own. Only <em>confirmed</em> findings can. A human signs off every lead
-          before it changes state, and System 1 suggestions stay advisory.
+          before it changes state, and AI suggestions stay advisory.
         </p>
       </div>
 

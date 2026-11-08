@@ -64,8 +64,8 @@ The dashboard implements 8 primary views using React Router with light/dark them
 ### 4. Finding Detail & Triage (`/findings/:id`)
 
 - **Headline & Attribution**: Attack class, CWE, source location (`file:line`), fingerprint, and Model + Phase attribution tag on all AI output.
-- **Side-by-Side Severity**: Direct comparison of hunter preliminary severity (pre-verification) alongside verified authoritative severity (System 2 gate-binding).
-- **System 1 (Jev) Triage Recommendation**: Prominently badged `System 1 · Advisory (non-binding)` displaying predicted severity band probabilities, owner candidate recommendations with confidence scores, and false-positive risk.
+- **Side-by-Side Severity**: Direct comparison of hunter preliminary severity (pre-verification) alongside verified authoritative severity.
+- **Triage Recommendation**: Prominently badged `AI Suggestion · Advisory (non-binding)` displaying predicted severity band probabilities, owner candidate recommendations with confidence scores, and false-positive risk.
 - **Verification Proof & Blockers**: Verifier confidence level, unresolved blockers (if `needs_validation`), or refutation rationale (if `rejected`).
 - **Vulnerability Source Trace**: Step-by-step dataflow path (`entrypoint` → `propagation` → `sink`) with code location and scope.
 - **Automated Fix Draft**: Generative remediation code proposal prominently badged `Draft · Human Review Only` with file diff preview.
@@ -87,7 +87,7 @@ The dashboard implements 8 primary views using React Router with light/dark them
 ### 7. Release Readiness (`/release-readiness`)
 
 - **Multi-Project Gate Evaluation**: Deterministic release evaluation running `evaluateGate()` across all projects.
-- **Strict Invariant**: **Only open confirmed findings can fail a release gate**. Advisory System 1 suggestions and `needs_validation` items are never blocking.
+- **Strict Invariant**: **Only open confirmed findings can fail a release gate**. Advisory AI suggestions and `needs_validation` items are never blocking.
 - **Violations Inspection**: Explicit listing of the exact confirmed findings blocking a deployment.
 
 ### 8. Compliance Audit Export (`/export`)
@@ -117,7 +117,7 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 - **Cascade**: `@layer theme, legacy, utilities`. The older stylesheet in `index.css` lives in `legacy`, below utilities, so its global reset cannot override Tailwind spacing. Tailwind's preflight is not imported; `.sdap-shell` carries a minimal reset.
 - **Primitives**: `src/components/stitch.tsx` (`Panel`, `Pill`, `Stat`, `Meter`, table and button classes). `Badges.tsx` builds on `Pill`.
 - **Styleguide**: `/styleguide` renders the real components for review.
-- **Invariants kept in the UI**: only `confirmed` findings gate; System 1 output is always badged "System 1 · Advisory"; drafts are badged "Draft · Human Review Only"; `false_positive` needs a reason and `accepted_risk` an expiry.
+- **Invariants kept in the UI**: only `confirmed` findings gate; AI suggestions are always badged "AI Suggestion · Advisory"; drafts are badged "Draft · Human Review Only"; `false_positive` needs a reason and `accepted_risk` an expiry.
 
 ## Sign-in & Session
 

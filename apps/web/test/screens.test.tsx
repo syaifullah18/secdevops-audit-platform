@@ -131,7 +131,7 @@ describe("Component Screen Tests against Mock API", () => {
 
     // System 1 Advisory badge
     expect(screen.getByTestId("system1-advisory")).toBeTruthy();
-    expect(screen.getByText("System 1 · Advisory")).toBeTruthy();
+    expect(screen.getByText("AI Suggestion · Advisory")).toBeTruthy();
 
     // Fix Draft badge
     expect(screen.getByTestId("fix-draft-viewer")).toBeTruthy();

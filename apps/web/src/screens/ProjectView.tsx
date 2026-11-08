@@ -4,6 +4,17 @@ import { api } from "../api/client.js";
 import type { Project, Run, Finding, GateResult, AuditMode } from "@sdap/core";
 import type { CoverageSummary } from "../api/types.js";
 import { SeverityBadge, StatusBadge, VerdictBadge } from "../components/Badges.js";
+import { Icon } from "../components/Icon.js";
+import {
+  ErrorBanner,
+  Loading,
+  Meter,
+  Panel,
+  Pill,
+  btn,
+  tableCls,
+  type Tone,
+} from "../components/stitch.js";
 import { useApp } from "../context/AppContext.js";
 
 export function ProjectViewScreen() {
@@ -80,111 +91,112 @@ export function ProjectViewScreen() {
     }
   };
 
-  if (loading) {
-    return <div data-testid="loading-indicator">Loading project details...</div>;
+  if (loading) return <Loading>Loading project details...</Loading>;
+  if (error || !project) {
+    return <ErrorBanner>Error loading project: {error || "Project not found"}</ErrorBanner>;
   }
 
-  if (error || !project) {
-    return (
-      <div role="alert" style={{ color: "var(--critical)" }}>
-        Error loading project: {error || "Project not found"}
-      </div>
-    );
-  }
+  const runTone = (status: string): Tone =>
+    status === "succeeded"
+      ? "verified"
+      : status === "running"
+        ? "low"
+        : status === "failed"
+          ? "critical"
+          : "neutral";
+  const phaseDot = (status: string): string =>
+    status === "succeeded"
+      ? "bg-verified-ink"
+      : status === "running"
+        ? "bg-sev-low-ink animate-pulse"
+        : status === "failed"
+          ? "bg-sev-critical-ink"
+          : "bg-outline-variant";
+
+  const tokensUsed = runs.reduce((n, r) => n + r.usage.inputTokens + r.usage.outputTokens, 0);
+  const costUsed = runs.reduce((n, r) => n + r.usage.costUsd, 0);
+  const budget = project.monthlyTokenBudget;
+  const budgetPct = budget ? (tokensUsed / budget) * 100 : 0;
+  const latest = runs[0];
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-      data-testid="project-view-screen"
-    >
-      {/* Project Header */}
-      <div className="card" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "12px",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 700 }}>{project.name}</h2>
-              <span className="badge badge-info">{project.slug}</span>
+    <div className="flex flex-col gap-6" data-testid="project-view-screen">
+      <Panel>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-xl font-bold font-headline text-on-surface tracking-tight">
+                {project.name}
+              </h2>
+              <Pill>{project.slug}</Pill>
+              <Pill
+                tone={gate?.pass ? "verified" : "critical"}
+                icon={gate?.pass ? "check_circle" : "block"}
+              >
+                {gate?.pass ? "Gate passing" : "Gate blocked"}
+              </Pill>
             </div>
-            <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "4px" }}>
-              Repository: <code style={{ fontFamily: "var(--font-mono)" }}>{project.repoUrl}</code>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Repository: <code className="font-mono text-on-surface">{project.repoUrl}</code>
             </p>
           </div>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setShowTriggerModal(true)}
-            data-testid="trigger-run-button"
-          >
-            ⚡ Trigger Audit Run
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-outline-variant/60 text-xs font-mono">
+              <Icon name="call_split" className="text-[16px] text-on-surface-variant" />
+              {project.defaultBranch}
+              {latest?.commitSha && (
+                <span className="text-outline">@ {latest.commitSha.slice(0, 7)}</span>
+              )}
+            </span>
+            <button
+              type="button"
+              className={btn.primary}
+              onClick={() => setShowTriggerModal(true)}
+              data-testid="trigger-run-button"
+            >
+              <Icon name="bolt" className="text-[16px]" />
+              Trigger Audit Run
+              <Icon name="expand_more" className="text-[16px]" />
+            </button>
+          </div>
         </div>
+        <dl className="mt-4 pt-4 border-t border-outline-variant/40 flex flex-wrap gap-x-8 gap-y-2 text-xs text-on-surface-variant">
+          <div>
+            Owning Team: <strong className="text-on-surface">{project.team}</strong>
+          </div>
+          <div>
+            Client: <strong className="text-on-surface">{project.clientId}</strong>
+          </div>
+          <div>
+            Default Branch: <strong className="text-on-surface">{project.defaultBranch}</strong>
+          </div>
+        </dl>
+      </Panel>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "24px",
-            flexWrap: "wrap",
-            fontSize: "0.85rem",
-            color: "var(--text-muted)",
-            paddingTop: "8px",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
-          <span>
-            Owning Team: <strong>{project.team}</strong>
-          </span>
-          <span>
-            Client: <strong>{project.clientId}</strong>
-          </span>
-          <span>
-            Default Branch: <strong>{project.defaultBranch}</strong>
-          </span>
-          <span>
-            Token Budget:{" "}
-            <strong>{project.monthlyTokenBudget?.toLocaleString() ?? "Default"} / mo</strong>
-          </span>
-        </div>
-      </div>
-
-      {/* Trigger Run Modal */}
       {showTriggerModal && (
         <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 100,
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onMouseDown={(e) =>
+            e.target === e.currentTarget && !triggering && setShowTriggerModal(false)
+          }
         >
-          <div className="card" style={{ width: "100%", maxWidth: "480px", margin: "16px" }}>
-            <h3 className="card-title" style={{ marginBottom: "16px" }}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="trigger-title"
+            className="w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest shadow-2xl p-6"
+          >
+            <h3 id="trigger-title" className="text-base font-semibold font-headline mb-4">
               Trigger Security Audit
             </h3>
-            <form
-              onSubmit={handleTriggerRun}
-              style={{ display: "flex", flexDirection: "column", gap: "14px" }}
-            >
-              <div className="form-group">
-                <label htmlFor="run-mode" className="form-label">
+            <form onSubmit={handleTriggerRun} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="run-mode" className="text-xs font-medium text-on-surface-variant">
                   Audit Mode
                 </label>
                 <select
                   id="run-mode"
-                  className="form-select"
+                  className="rounded-md border border-outline-variant/60 bg-surface-container-lowest px-3 py-2 text-sm"
                   value={newRunMode}
                   onChange={(e) => setNewRunMode(e.target.value as AuditMode)}
                 >
@@ -193,32 +205,23 @@ export function ProjectViewScreen() {
                   <option value="full">Full (Comprehensive scan with repeat-N)</option>
                 </select>
               </div>
-
-              <div className="form-group">
-                <label htmlFor="run-ref" className="form-label">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="run-ref" className="text-xs font-medium text-on-surface-variant">
                   Git Ref / Branch / Commit
                 </label>
                 <input
                   id="run-ref"
                   type="text"
-                  className="form-input"
+                  className="rounded-md border border-outline-variant/60 bg-surface-container-lowest px-3 py-2 text-sm font-mono"
                   value={newRunRef}
                   onChange={(e) => setNewRunRef(e.target.value)}
                   required
                 />
               </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "10px",
-                  marginTop: "10px",
-                }}
-              >
+              <div className="flex justify-end gap-2 mt-2">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={btn.secondary}
                   onClick={() => setShowTriggerModal(false)}
                   disabled={triggering}
                 >
@@ -226,7 +229,7 @@ export function ProjectViewScreen() {
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className={btn.primary}
                   disabled={triggering}
                   data-testid="submit-trigger-run"
                 >
@@ -238,66 +241,40 @@ export function ProjectViewScreen() {
         </div>
       )}
 
-      {/* Gate Status & Coverage Ledger */}
-      <div className="side-by-side">
-        {/* Gate Status Card */}
-        <div className="card" data-testid="gate-status-card">
-          <div className="card-header">
-            <h3 className="card-title">Release Gate Status</h3>
-            {gate?.pass ? (
-              <span
-                className="badge badge-success"
-                style={{ fontSize: "0.85rem", padding: "4px 10px" }}
-              >
-                PASSED
-              </span>
-            ) : (
-              <span
-                className="badge badge-critical"
-                style={{ fontSize: "0.85rem", padding: "4px 10px" }}
-              >
-                BLOCKED
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-              <span style={{ color: "var(--text-muted)" }}>Policy Mode:</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Panel
+          testId="gate-status-card"
+          title="Release Gate Status"
+          actions={
+            <Pill tone={gate?.pass ? "verified" : "critical"} className="text-xs">
+              {gate?.pass ? "PASSED" : "BLOCKED"}
+            </Pill>
+          }
+        >
+          <div className="flex flex-col gap-2.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Policy Mode:</span>
               <strong>{gate?.mode === "enforce" ? "Strict Enforce" : "Report Only"}</strong>
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-              <span style={{ color: "var(--text-muted)" }}>Blocking Violations:</span>
-              <strong
-                style={{
-                  color: (gate?.violations.length || 0) > 0 ? "var(--critical)" : "inherit",
-                }}
-              >
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Blocking Violations:</span>
+              <strong className={(gate?.violations.length || 0) > 0 ? "text-sev-critical-ink" : ""}>
                 {gate?.violations.length || 0} confirmed findings
               </strong>
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-              <span style={{ color: "var(--text-muted)" }}>Excepted Findings:</span>
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Excepted Findings:</span>
               <span>{gate?.excepted.length || 0} active exceptions</span>
             </div>
-
             {gate && gate.violations.length > 0 && (
-              <div
-                style={{
-                  marginTop: "8px",
-                  paddingTop: "8px",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--critical)" }}>
+              <div className="pt-2.5 mt-1 border-t border-outline-variant/40">
+                <span className="text-[11px] font-semibold text-sev-critical-ink">
                   Gate Blocking Findings:
                 </span>
-                <ul style={{ paddingLeft: "18px", marginTop: "4px", fontSize: "0.85rem" }}>
+                <ul className="mt-1.5 flex flex-col gap-1">
                   {gate.violations.map((v) => (
                     <li key={v.findingId}>
-                      <Link to={`/findings/${v.findingId}`}>
+                      <Link className="hover:underline font-mono" to={`/findings/${v.findingId}`}>
                         {v.severity.toUpperCase()} ({v.fingerprint})
                       </Link>
                     </li>
@@ -306,80 +283,42 @@ export function ProjectViewScreen() {
               </div>
             )}
           </div>
-        </div>
+        </Panel>
 
-        {/* Coverage Ledger Summary */}
-        <div className="card" data-testid="coverage-ledger-card">
-          <div className="card-header">
-            <h3 className="card-title">Coverage Ledger Summary</h3>
-            <span className="badge badge-info" style={{ fontSize: "0.85rem" }}>
-              {coverage?.coveragePct.toFixed(1)}% Audited
-            </span>
-          </div>
-
+        <Panel
+          testId="coverage-ledger-card"
+          title="Coverage Ledger Summary"
+          actions={<Pill>{coverage?.coveragePct.toFixed(1)}% Audited</Pill>}
+        >
           {coverage && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div
-                style={{
-                  height: "8px",
-                  backgroundColor: "var(--surface-raised)",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${coverage.coveragePct}%`,
-                    height: "100%",
-                    backgroundColor: "var(--primary)",
-                  }}
-                />
-              </div>
-
-              <div
-                style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}
-              >
-                <span style={{ color: "var(--text-muted)" }}>Audited Units:</span>
+            <div className="flex flex-col gap-2.5 text-xs">
+              <Meter pct={coverage.coveragePct} label="Audited coverage" />
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Audited Units:</span>
                 <strong>
                   {coverage.auditedUnits} / {coverage.totalUnits}
                 </strong>
               </div>
-
-              <div
-                style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}
-              >
-                <span style={{ color: "var(--text-muted)" }}>Last Audited:</span>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Last Audited:</span>
                 <span>
                   {coverage.lastAuditedAt
                     ? new Date(coverage.lastAuditedAt).toLocaleString()
                     : "Never"}
                 </span>
               </div>
-
               {coverage.uncoveredPaths.length > 0 && (
-                <div style={{ marginTop: "6px" }}>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                    }}
-                  >
+                <div className="mt-1">
+                  <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wide">
                     Coverage Gaps (Unaudited Target Units):
                   </span>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
-                    {coverage.uncoveredPaths.map((p) => (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {coverage.uncoveredPaths.map((path) => (
                       <code
-                        key={p}
-                        style={{
-                          fontSize: "0.75rem",
-                          padding: "2px 6px",
-                          backgroundColor: "var(--surface-raised)",
-                          borderRadius: "4px",
-                        }}
+                        key={path}
+                        className="text-[11px] px-1.5 py-0.5 rounded bg-surface-container-high font-mono"
                       >
-                        {p}
+                        {path}
                       </code>
                     ))}
                   </div>
@@ -387,94 +326,96 @@ export function ProjectViewScreen() {
               )}
             </div>
           )}
-        </div>
+        </Panel>
+
+        <Panel testId="token-usage-card" title="Monthly Token Usage">
+          <div className="flex flex-col gap-2.5 text-xs">
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-bold font-headline">${costUsed.toFixed(2)}</span>
+              <span className="font-mono text-on-surface-variant">
+                {tokensUsed.toLocaleString()} {budget ? `/ ${budget.toLocaleString()}` : ""} tokens
+              </span>
+            </div>
+            {budget ? (
+              <Meter
+                pct={budgetPct}
+                label="Token budget used"
+                barClassName={
+                  budgetPct >= 90
+                    ? "bg-sev-critical-ink"
+                    : budgetPct >= 70
+                      ? "bg-sev-medium-ink"
+                      : "bg-on-surface"
+                }
+              />
+            ) : (
+              <p className="text-on-surface-variant">
+                No project budget; inherits team or client budget.
+              </p>
+            )}
+          </div>
+        </Panel>
       </div>
 
-      {/* Run History Table */}
-      <div className="card" data-testid="run-history-card">
-        <h3 className="card-title">Run History</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Execution pipeline history, phases, token usage and validator results
-        </p>
-
-        <div className="table-container">
-          <table className="data-table">
+      <Panel
+        testId="run-history-card"
+        title="Run History Ledger"
+        subtitle="Execution pipeline history, phases, token usage and validator results"
+      >
+        <div className={tableCls.wrap}>
+          <table className={tableCls.table}>
             <thead>
-              <tr>
-                <th>Status</th>
-                <th>Mode</th>
-                <th>Git Ref</th>
-                <th>Commit</th>
-                <th>Phases</th>
-                <th>Validators</th>
-                <th>Token Cost</th>
-                <th>Date</th>
-                <th>Action</th>
+              <tr className={tableCls.headRow}>
+                {[
+                  "Status",
+                  "Mode",
+                  "Git Ref",
+                  "Commit",
+                  "Phases",
+                  "Validators",
+                  "Token Cost",
+                  "Date",
+                  "Action",
+                ].map((h) => (
+                  <th key={h} className={tableCls.th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {runs.map((run) => (
-                <tr key={run.id}>
-                  <td>
-                    <span
-                      className={`badge ${
-                        run.status === "succeeded"
-                          ? "badge-success"
-                          : run.status === "running"
-                            ? "badge-low"
-                            : run.status === "failed"
-                              ? "badge-critical"
-                              : "badge-info"
-                      }`}
-                    >
-                      {run.status}
+                <tr key={run.id} className={tableCls.row}>
+                  <td className={tableCls.td}>
+                    <Pill tone={runTone(run.status)}>{run.status}</Pill>
+                  </td>
+                  <td className={tableCls.td}>
+                    <Pill>{run.mode}</Pill>
+                  </td>
+                  <td className={`${tableCls.td} font-mono`}>{run.ref}</td>
+                  <td className={`${tableCls.td} font-mono`}>
+                    {run.commitSha ? run.commitSha.slice(0, 7) : "-"}
+                  </td>
+                  <td className={tableCls.td}>
+                    <span className="inline-flex gap-1">
+                      {run.phases.map((ph) => (
+                        <span
+                          key={ph.name}
+                          title={`${ph.name}: ${ph.status}`}
+                          className={`inline-block h-2 w-2 rounded-full ${phaseDot(ph.status)}`}
+                        />
+                      ))}
                     </span>
                   </td>
-                  <td>
-                    <span className="badge badge-info">{run.mode}</span>
+                  <td className={`${tableCls.td} font-mono text-on-surface-variant`}>
+                    F: {run.validators.findings} · C: {run.validators.coverageLedger}
                   </td>
-                  <td>
-                    <code>{run.ref}</code>
-                  </td>
-                  <td>
-                    <code style={{ fontSize: "0.8rem" }}>
-                      {run.commitSha ? run.commitSha.slice(0, 7) : "-"}
-                    </code>
-                  </td>
-                  <td>
-                    {run.phases.map((ph) => (
-                      <span
-                        key={ph.name}
-                        title={`${ph.name}: ${ph.status}`}
-                        style={{
-                          display: "inline-block",
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          marginRight: "4px",
-                          backgroundColor:
-                            ph.status === "succeeded"
-                              ? "var(--success)"
-                              : ph.status === "running"
-                                ? "var(--low)"
-                                : ph.status === "failed"
-                                  ? "var(--critical)"
-                                  : "var(--border-strong)",
-                        }}
-                      />
-                    ))}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                      F: {run.validators.findings} · C: {run.validators.coverageLedger}
-                    </span>
-                  </td>
-                  <td>${run.usage.costUsd.toFixed(3)}</td>
-                  <td>{new Date(run.createdAt).toLocaleDateString()}</td>
-                  <td>
+                  <td className={`${tableCls.td} font-mono`}>${run.usage.costUsd.toFixed(3)}</td>
+                  <td className={tableCls.td}>{new Date(run.createdAt).toLocaleDateString()}</td>
+                  <td className={tableCls.td}>
                     <Link
                       to={`/runs/${run.id}`}
-                      className="btn btn-secondary btn-sm"
+                      className={btn.secondary}
                       data-testid={`view-run-${run.id}`}
                     >
                       Timeline
@@ -485,69 +426,60 @@ export function ProjectViewScreen() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
 
-      {/* Open Findings in this Project */}
-      <div className="card" data-testid="project-findings-card">
-        <h3 className="card-title">Project Findings ({findings.length})</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Active vulnerabilities and candidate issues identified in {project.name}
-        </p>
-
-        <div className="table-container">
-          <table className="data-table">
+      <Panel
+        testId="project-findings-card"
+        title={`Project Findings (${findings.length})`}
+        subtitle={`Active vulnerabilities and candidate issues identified in ${project.name}`}
+      >
+        <div className={tableCls.wrap}>
+          <table className={tableCls.table}>
             <thead>
-              <tr>
-                <th>Severity</th>
-                <th>Verdict</th>
-                <th>Title</th>
-                <th>Attack Class</th>
-                <th>Status</th>
-                <th>Owner</th>
-                <th>SLA Due</th>
-                <th>Action</th>
+              <tr className={tableCls.headRow}>
+                {[
+                  "Severity",
+                  "Verdict",
+                  "Title",
+                  "Attack Class",
+                  "Status",
+                  "Owner",
+                  "SLA Due",
+                  "Action",
+                ].map((h) => (
+                  <th key={h} className={tableCls.th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {findings.map((f) => (
-                <tr key={f.id}>
-                  <td>
+                <tr key={f.id} className={tableCls.row}>
+                  <td className={tableCls.td}>
                     <SeverityBadge severity={f.verifiedSeverity} />
                   </td>
-                  <td>
+                  <td className={tableCls.td}>
                     <VerdictBadge verdict={f.verdict} />
                   </td>
-                  <td>
-                    <Link to={`/findings/${f.id}`} style={{ fontWeight: 600 }}>
+                  <td className={tableCls.td}>
+                    <Link to={`/findings/${f.id}`} className="font-semibold hover:underline">
                       {f.title}
                     </Link>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    <div className="text-[11px] font-mono text-on-surface-variant">
                       {f.location.file}:{f.location.line}
                     </div>
                   </td>
-                  <td>{f.attackClass}</td>
-                  <td>
+                  <td className={tableCls.td}>{f.attackClass}</td>
+                  <td className={tableCls.td}>
                     <StatusBadge status={f.status} />
                   </td>
-                  <td>{f.owner || "Unassigned"}</td>
-                  <td>
-                    {f.slaDue ? (
-                      <span
-                        style={{
-                          color:
-                            new Date(f.slaDue).getTime() < Date.now()
-                              ? "var(--critical)"
-                              : "inherit",
-                        }}
-                      >
-                        {new Date(f.slaDue).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      "-"
-                    )}
+                  <td className={tableCls.td}>{f.owner || "Unassigned"}</td>
+                  <td className={tableCls.td}>
+                    {f.slaDue ? new Date(f.slaDue).toLocaleDateString() : "-"}
                   </td>
-                  <td>
-                    <Link to={`/findings/${f.id}`} className="btn btn-secondary btn-sm">
+                  <td className={tableCls.td}>
+                    <Link to={`/findings/${f.id}`} className={btn.secondary}>
                       Inspect
                     </Link>
                   </td>
@@ -556,7 +488,7 @@ export function ProjectViewScreen() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

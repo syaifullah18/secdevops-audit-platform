@@ -17,7 +17,6 @@ import {
   severityTone,
   tableCls,
 } from "../components/stitch.js";
-import { useApp } from "../context/AppContext.js";
 
 const SEVERITIES: readonly Severity[] = ["critical", "high", "medium", "low", "informational"];
 const SEV_BAR: Record<Severity, string> = {
@@ -37,7 +36,6 @@ const heat = (n: number): string => {
 };
 
 export function OrgOverviewScreen() {
-  const { showRejected } = useApp();
   const [metrics, setMetrics] = useState<OrgOverviewMetrics | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -52,7 +50,7 @@ export function OrgOverviewScreen() {
         const [overviewData, projs, fPage] = await Promise.all([
           api.getOverview(),
           api.getProjects(),
-          api.getFindings({ includeRejected: showRejected, limit: 100 }),
+          api.getFindings({ limit: 100 }),
         ]);
         if (mounted) {
           setMetrics(overviewData);
@@ -69,7 +67,7 @@ export function OrgOverviewScreen() {
     return () => {
       mounted = false;
     };
-  }, [showRejected]);
+  }, []);
 
   if (loading) return <Loading>Loading organization security posture...</Loading>;
   if (error || !metrics) return <ErrorBanner>Error loading overview: {error}</ErrorBanner>;
@@ -262,7 +260,7 @@ export function OrgOverviewScreen() {
 
           <Panel
             title="Findings by Verification Verdict"
-            subtitle={`Verification status (${showRejected ? "including rejected" : "rejected candidates hidden"})`}
+            subtitle={"Verification status (rejected candidates hidden)"}
           >
             <div className="flex flex-col gap-2">
               {(

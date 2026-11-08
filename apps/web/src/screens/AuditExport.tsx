@@ -14,7 +14,6 @@ import {
   cx,
   tableCls,
 } from "../components/stitch.js";
-import { useApp } from "../context/AppContext.js";
 
 type FrameworkId = "soc2" | "iso27001" | "pci";
 type RangeId = "all" | "30" | "90";
@@ -42,7 +41,6 @@ const FRAMEWORKS: Array<{ id: FrameworkId; name: string; control: string; signal
 ];
 
 export function AuditExportScreen() {
-  const { showRejected } = useApp();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [allFindings, setAllFindings] = useState<Finding[]>([]);
@@ -61,7 +59,6 @@ export function AuditExportScreen() {
           api.getProjects(),
           api.getFindings({
             projectId: selectedProjectId === "all" ? undefined : selectedProjectId,
-            includeRejected: showRejected,
             limit: 500,
           }),
         ]);
@@ -79,7 +76,7 @@ export function AuditExportScreen() {
     return () => {
       mounted = false;
     };
-  }, [selectedProjectId, showRejected]);
+  }, [selectedProjectId]);
 
   // Date range filters on first-seen; exports and preview all use the scoped list.
   const findings = useMemo(() => {

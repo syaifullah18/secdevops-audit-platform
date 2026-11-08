@@ -15,11 +15,9 @@ import {
   tableCls,
   type Tone,
 } from "../components/stitch.js";
-import { useApp } from "../context/AppContext.js";
 
 export function ProjectViewScreen() {
   const { id } = useParams<{ id: string }>();
-  const { showRejected } = useApp();
 
   const [project, setProject] = useState<Project | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -45,7 +43,7 @@ export function ProjectViewScreen() {
         const [proj, runPage, fPage, gateRes, cov] = await Promise.all([
           api.getProject(id!),
           api.getRuns(id!),
-          api.getFindings({ projectId: id!, includeRejected: showRejected, limit: 100 }),
+          api.getFindings({ projectId: id!, limit: 100 }),
           api.getGate(id!),
           api.getCoverage(id!),
         ]);
@@ -70,7 +68,7 @@ export function ProjectViewScreen() {
     return () => {
       mounted = false;
     };
-  }, [id, showRejected]);
+  }, [id]);
 
   const handleTriggerRun = async (e: FormEvent) => {
     e.preventDefault();

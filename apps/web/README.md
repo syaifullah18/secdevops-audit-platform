@@ -100,7 +100,7 @@ The dashboard implements 8 primary views using React Router with light/dark them
 
 ## Global Controls & Accessibility
 
-- **Rejected Findings Toggle**: In the top navigation bar, rejected candidate leads are hidden by default per PRD 5.4. Checking "Show rejected findings" reveals refuted candidates across all tables and screens.
+- **Rejected candidates**: refuted leads are hidden from lists and exports per PRD 5.4; there is no toggle, and they never affect the release gate.
 - **Light / Dark Mode**: Icon toggle in the sidebar footer. Dark mode re-points the same colour tokens under `[data-theme="dark"]`, so no per-element overrides exist. Persisted in `localStorage`.
 - **Command Palette** (`⌘K` / `Ctrl+K`, or click the top-bar search): quick actions (`⌘R` audit, `⌘E` exception, `⌘P` export, `⌘D` theme) and recent confirmed or advisory findings. Arrow keys move, `Enter` runs, `Esc` closes. Rejected findings are never listed.
 - **Sandbox Replay terminal**: opened from a finding or a review-queue card. It is a **simulation**: it replays the finding's own recorded trace, executes nothing, shows no invented data, and cannot change a verdict or status.
@@ -123,7 +123,7 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 
 - `/login`: paste an OIDC access token for a real API (`VITE_API_BASE_URL` set). With the mock API, "Continue in demo mode" is also offered and the demo user is signed in automatically until you sign out.
 - The token lives in `sessionStorage` for the tab only and is sent as a bearer token. A 401 or token expiry signs you out. Claims are decoded for display only; the API enforces roles and client scope.
-- `/profile`: identity, roles, team, client scope, session expiry and preferences (theme, show rejected). Identity is read-only.
+- `/profile`: identity, roles, team, client scope, session expiry and preferences (theme). Identity is read-only.
 - The theme control is a labelled switch (`role="switch"`) in the sidebar, login and profile.
 - Caveat: `sessionStorage` is readable by page scripts; see D-018 and the PKCE follow-up.
 

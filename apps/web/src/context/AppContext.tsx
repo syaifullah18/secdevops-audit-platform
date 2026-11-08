@@ -16,9 +16,6 @@ import {
 interface AppContextValue {
   theme: "light" | "dark";
   toggleTheme: () => void;
-  showRejected: boolean;
-  setShowRejected: (show: boolean) => void;
-  toggleShowRejected: () => void;
   /** Signed-in user, or null when signed out. */
   user: SessionUser | null;
   /** Returns an error message, or null on success. */
@@ -51,14 +48,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     return "light";
-  });
-
-  const [showRejected, setShowRejected] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sdap_show_rejected");
-      return saved === "true";
-    }
-    return false;
   });
 
   const [user, setUser] = useState<SessionUser | null>(initialUser);
@@ -102,16 +91,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("sdap_theme", theme);
   }, [theme]);
 
-  useEffect(() => {
-    localStorage.setItem("sdap_show_rejected", String(showRejected));
-  }, [showRejected]);
-
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
-
-  const toggleShowRejected = () => {
-    setShowRejected((prev) => !prev);
   };
 
   return (
@@ -119,9 +100,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         theme,
         toggleTheme,
-        showRejected,
-        setShowRejected,
-        toggleShowRejected,
         user,
         signIn,
         signInDemo,

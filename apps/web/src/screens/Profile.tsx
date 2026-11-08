@@ -22,7 +22,7 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
 
 /** Who is signed in and what that grants. Identity is managed by the identity provider. */
 export function ProfileScreen() {
-  const { user, signOut, showRejected, toggleShowRejected } = useApp();
+  const { user, signOut } = useApp();
   const navigate = useNavigate();
   if (!user) return null;
 
@@ -90,28 +90,7 @@ export function ProfileScreen() {
 
           <Panel title="Preferences">
             <div className="flex flex-col gap-4">
-              <ThemeToggle testId="profile-theme-toggle" />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-medium text-on-surface-variant">
-                  Show rejected findings
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showRejected}
-                  aria-label="Show rejected findings"
-                  onClick={toggleShowRejected}
-                  className={`relative h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors ${
-                    showRejected ? "bg-on-surface" : "bg-surface-container-highest"
-                  }`}
-                >
-                  <span
-                    className={`block h-4 w-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform ${
-                      showRejected ? "translate-x-4" : ""
-                    }`}
-                  />
-                </button>
-              </div>
+              <ThemeToggle testId="profile-theme-toggle" />{" "}
             </div>
           </Panel>
 

@@ -46,7 +46,7 @@ const navLinkClass = (active: boolean): string =>
   ].join(" ");
 
 export function Layout() {
-  const { showRejected, toggleShowRejected, user, signOut } = useApp();
+  const { user, signOut } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -283,33 +283,6 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="hidden sm:flex items-center gap-2 mr-1">
-              <span
-                id="rejected-toggle-label"
-                className="text-xs text-on-surface-variant select-none"
-                title="Show or hide findings marked as rejected by verification"
-              >
-                Show Rejected Findings
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={showRejected}
-                aria-labelledby="rejected-toggle-label"
-                onClick={toggleShowRejected}
-                data-testid="toggle-show-rejected"
-                className={`w-9 h-5 rounded-full relative p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-on-surface ${
-                  showRejected ? "bg-on-surface" : "bg-surface-container-highest"
-                }`}
-              >
-                <span
-                  className={`block w-4 h-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform ${
-                    showRejected ? "translate-x-4" : ""
-                  }`}
-                />
-              </button>
-            </div>
-
             <button
               type="button"
               aria-label="Notifications (1 unread)"

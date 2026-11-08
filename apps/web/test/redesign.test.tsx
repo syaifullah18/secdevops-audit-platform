@@ -68,14 +68,8 @@ describe("Stitch redesign", () => {
       expect(screen.getByTestId("nav-overview").getAttribute("aria-current")).toBeNull();
     });
 
-    it("toggles theme on <html> and exposes the rejected switch state", () => {
+    it("toggles theme on <html>", () => {
       shell();
-      const toggle = screen.getByTestId("toggle-show-rejected");
-      expect(toggle.getAttribute("role")).toBe("switch");
-      expect(toggle.getAttribute("aria-checked")).toBe("false");
-      fireEvent.click(toggle);
-      expect(toggle.getAttribute("aria-checked")).toBe("true");
-
       fireEvent.click(screen.getByTestId("theme-toggle-button"));
       expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
       fireEvent.click(screen.getByTestId("theme-toggle-button"));

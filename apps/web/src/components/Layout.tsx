@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { api } from "../api/client.js";
-import { useApp } from "../context/AppContext.js";
 import { CommandPaletteModal } from "./CommandPaletteModal.js";
 import { Icon } from "./Icon.js";
 import { ThemeToggle } from "./ui/ThemeToggle.js";
 import { UserMenu } from "./UserMenu.js";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher.js";
 import type { Project } from "@sdap/core";
-import { topRole } from "../auth/session.js";
 
 const WORKSPACE = "Audit Workspace";
 
@@ -47,8 +45,6 @@ const navLinkClass = (active: boolean): string =>
   ].join(" ");
 
 export function Layout() {
-  const { user, signOut } = useApp();
-  const navigate = useNavigate();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [queueCount, setQueueCount] = useState<number | null>(null);
@@ -203,40 +199,6 @@ export function Layout() {
 
           <div className="pt-2 border-t border-outline-variant/40 flex flex-col gap-3 px-1">
             <ThemeToggle testId="theme-toggle-button" />
-            {user && (
-              <div className="flex items-center justify-between gap-2">
-                <Link
-                  to="/profile"
-                  data-testid="sidebar-profile"
-                  className="flex items-center gap-2.5 min-w-0 rounded-md hover:bg-surface-container transition-colors p-1 -m-1"
-                >
-                  <div className="h-8 w-8 shrink-0 rounded-full bg-surface-container-high border border-outline-variant/60 flex items-center justify-center text-xs font-semibold text-on-surface">
-                    {user.initials}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-semibold text-on-surface leading-tight truncate">
-                      {user.name}
-                    </span>
-                    <span className="text-[10px] text-on-surface-variant truncate">
-                      {topRole(user.roles) ?? "no role"}
-                      {user.demo ? " · demo" : ""}
-                    </span>
-                  </div>
-                </Link>
-                <button
-                  type="button"
-                  aria-label="Sign out"
-                  title="Sign out"
-                  onClick={() => {
-                    signOut();
-                    navigate("/login", { replace: true });
-                  }}
-                  className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
-                >
-                  <Icon name="logout" className="text-[18px]" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </aside>

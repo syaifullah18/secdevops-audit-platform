@@ -1,6 +1,8 @@
 import type { Severity } from "@sdap/core";
 import { SeverityBadge } from "./Badges.js";
+import { Icon } from "./Icon.js";
 
+/** Dual-track severity: the hunter's pre-verification guess next to the gate-authoritative one. */
 export function SideBySideSeverity({
   originalSeverity,
   verifiedSeverity,
@@ -9,51 +11,24 @@ export function SideBySideSeverity({
   verifiedSeverity: Severity | null;
 }) {
   return (
-    <div
-      className="side-by-side"
-      style={{
-        backgroundColor: "var(--surface-raised)",
-        padding: "16px",
-        borderRadius: "var(--radius)",
-        border: "1px solid var(--border)",
-      }}
-      data-testid="side-by-side-severity"
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <span
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--text-muted)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-          }}
-        >
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="side-by-side-severity">
+      <div className="rounded-lg border border-advisory-border bg-advisory-bg/40 p-4 flex flex-col gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-advisory-ink">
           Hunter Severity (Pre-Verification)
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="flex items-center gap-3">
           <SeverityBadge severity={originalSeverity} />
-          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-            Initial candidate assessment
-          </span>
+          <span className="text-xs text-on-surface-variant">Initial candidate assessment</span>
         </div>
       </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <span
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--text-muted)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-          }}
-        >
+      <div className="rounded-lg border border-verified-border bg-verified-bg/40 p-4 flex flex-col gap-2">
+        <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-verified-ink">
+          <Icon name="verified" filled className="text-[14px]" />
           Verified Severity (Gate Authoritative)
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="flex items-center gap-3">
           <SeverityBadge severity={verifiedSeverity} />
-          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-            Authoritative verified ranking
-          </span>
+          <span className="text-xs text-on-surface-variant">Authoritative verified ranking</span>
         </div>
       </div>
     </div>

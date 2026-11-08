@@ -128,15 +128,6 @@ export function ReviewQueueScreen() {
         subtitle="Candidate leads from hunter agents where automatic proof could not be established."
       />
 
-      <div className="flex items-start gap-3 rounded-lg border border-advisory-border bg-advisory-bg text-advisory-ink px-4 py-3">
-        <Icon name="policy" className="text-xl mt-0.5" />
-        <p className="text-xs leading-relaxed">
-          <strong>Policy invariant (PRD 5.4):</strong> candidate leads never block a merge or fail a
-          gate on their own. Only <em>confirmed</em> findings can. A human signs off every lead
-          before it changes state, and AI suggestions stay advisory.
-        </p>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-on-surface-variant">
           Showing <strong className="text-on-surface">{filtered.length}</strong> items awaiting

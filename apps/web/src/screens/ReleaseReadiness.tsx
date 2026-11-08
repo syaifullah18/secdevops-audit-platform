@@ -141,10 +141,6 @@ export function ReleaseReadinessScreen() {
                 ? "All Projects Ready for Release"
                 : `${blockedCount} Project(s) Blocked by Security Policy Gate`}
             </h3>
-            <p className="text-xs mt-0.5">
-              Core Principle: Only open confirmed findings can fail a release gate. Advisory leads
-              (AI suggestions) and rejected candidates never block.
-            </p>
           </div>
         </div>
         <span className="text-xl font-bold font-mono tracking-wide" data-testid="gatekeeper-status">
@@ -153,7 +149,7 @@ export function ReleaseReadinessScreen() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Panel title="Invariant Evaluation" className="lg:col-span-1" testId="invariants-card">
+        <Panel title="Gate Checks" className="lg:col-span-1" testId="invariants-card">
           <ul className="flex flex-col gap-3">
             {checks.map((c) => (
               <li key={c.id} className="flex items-start gap-3" data-testid={`check-${c.id}`}>

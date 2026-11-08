@@ -12,3 +12,4 @@ test-results/
 /runs/
 /artifacts/
 .claude/settings.local.json
+apps/web/src/api/audit-data.generated.json

@@ -25,6 +25,23 @@ import {
 } from "./fixtures.js";
 import type { CoverageSummary, OrgOverviewMetrics } from "./types.js";
 
+/**
+ * Optional local dataset built by `scripts/import-audit-data.mjs` from real audit runs.
+ * Git-ignored (it describes real vulnerabilities); absent in CI and fresh clones.
+ * Enabled with VITE_MOCK_DATASET=audit.
+ */
+interface AuditDataset {
+  projects: Project[];
+  runs: Run[];
+  slices: Slice[];
+  findings: Finding[];
+}
+const auditDataset = (): AuditDataset | null => {
+  if (import.meta.env?.VITE_MOCK_DATASET !== "audit") return null;
+  const files = import.meta.glob("./audit-data.generated.json", { eager: true, import: "default" });
+  return (Object.values(files)[0] as AuditDataset | undefined) ?? null;
+};
+
 export class MockDataStore {
   projects: Project[] = [];
   policies: Policy[] = [];
@@ -49,6 +66,18 @@ export class MockDataStore {
     this.findings = JSON.parse(JSON.stringify(FIXTURE_FINDINGS));
     this.triageHistory = JSON.parse(JSON.stringify(FIXTURE_TRIAGE_HISTORY));
     this.events = JSON.parse(JSON.stringify(FIXTURE_EVENTS));
+
+    const audit = auditDataset();
+    if (audit) {
+      const policyId = this.policies[0]?.id ?? null;
+      this.projects = audit.projects.map((p) => ({ ...p, policyId }));
+      this.runs = JSON.parse(JSON.stringify(audit.runs));
+      this.slices = JSON.parse(JSON.stringify(audit.slices));
+      this.findings = JSON.parse(JSON.stringify(audit.findings));
+      this.exceptions = [];
+      this.triageHistory = {};
+      this.events = [];
+    }
   }
 
   getProjects(): Project[] {

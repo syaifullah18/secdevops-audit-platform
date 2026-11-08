@@ -100,7 +100,7 @@ The dashboard implements 8 primary views using React Router with light/dark them
 
 ## Global Controls & Accessibility
 
-- **Rejected candidates**: refuted leads are hidden from lists and exports per PRD 5.4; there is no toggle, and they never affect the release gate.
+- **Rejected candidates**: refuted leads are hidden from lists and exports; there is no toggle, and they never affect the release gate.
 - **Light / Dark Mode**: Icon toggle in the sidebar footer. Dark mode re-points the same colour tokens under `[data-theme="dark"]`, so no per-element overrides exist. Persisted in `localStorage`.
 - **Command Palette** (`⌘K` / `Ctrl+K`, or click the top-bar search): quick actions (`⌘R` audit, `⌘E` exception, `⌘P` export, `⌘D` theme) and recent confirmed or advisory findings. Arrow keys move, `Enter` runs, `Esc` closes. Rejected findings are never listed.
 - **Sandbox Replay terminal**: opened from a finding or a review-queue card. It is a **simulation**: it replays the finding's own recorded trace, executes nothing, shows no invented data, and cannot change a verdict or status.
@@ -139,3 +139,7 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 | `pnpm lint`      | Run ESLint checks against React and browser globals                     |
 | `pnpm test`      | Run Vitest unit and component tests with JSDOM environment              |
 | `pnpm e2e`       | Run Playwright smoke tests against `vite preview` with mock API         |
+
+## Local dataset from real audit runs
+
+`node scripts/import-audit-data.mjs <dir>` converts security-audit-skill run folders (`<project>/run-1/…`) into mock data at `src/api/audit-data.generated.json`. Start with `VITE_MOCK_DATASET=audit pnpm dev:mock`. The file is git-ignored on purpose: it describes real, possibly unfixed vulnerabilities, so never commit it or the folders it came from.

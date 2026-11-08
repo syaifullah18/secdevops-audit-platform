@@ -156,9 +156,7 @@ export function TriageActionForm({
             disabled={disabled || submitting}
             min={new Date().toISOString().split("T")[0]}
           />
-          <span className={HINT}>
-            PRD requirement: accepted risk findings must specify an expiration date.
-          </span>
+          <span className={HINT}>Accepted risk needs an expiry date.</span>
         </div>
       )}
 

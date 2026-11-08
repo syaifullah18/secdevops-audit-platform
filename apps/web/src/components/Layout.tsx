@@ -51,6 +51,7 @@ export function Layout() {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [queueCount, setQueueCount] = useState<number | null>(null);
+  const [repoCount, setRepoCount] = useState<number | null>(null);
 
   // The badge is informational; a failed fetch just hides it.
   useEffect(() => {
@@ -59,6 +60,12 @@ export function Layout() {
       .getReviewQueue()
       .then((q) => {
         if (mounted) setQueueCount(q.length);
+      })
+      .catch(() => undefined);
+    api
+      .getProjects()
+      .then((ps) => {
+        if (mounted) setRepoCount(ps.length);
       })
       .catch(() => undefined);
     return () => {
@@ -129,7 +136,7 @@ export function Layout() {
               <span className="font-headline text-base font-bold text-on-surface tracking-tight leading-tight">
                 SecDevOps Audit
               </span>
-              <span className="text-xs text-on-surface-variant font-medium">Enterprise Tier</span>
+              <span className="text-xs text-on-surface-variant font-medium">Open Source</span>
             </div>
           </div>
 
@@ -145,7 +152,9 @@ export function Layout() {
                   {WORKSPACE}
                 </span>
                 <span className="block text-[11px] text-on-surface-variant">
-                  5 Repositories Active
+                  {repoCount === null
+                    ? "Loading repositories…"
+                    : `${repoCount} ${repoCount === 1 ? "Repository" : "Repositories"} Active`}
                 </span>
               </span>
             </span>

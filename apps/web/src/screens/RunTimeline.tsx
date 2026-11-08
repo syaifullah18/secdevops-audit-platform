@@ -2,6 +2,27 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import type { Run, Slice, PlatformEvent } from "@sdap/core";
+import { Icon } from "../components/Icon.js";
+import {
+  ErrorBanner,
+  Loading,
+  Panel,
+  Pill,
+  Stat,
+  btn,
+  cx,
+  tableCls,
+  type Tone,
+} from "../components/stitch.js";
+
+const statusTone = (s: string): Tone =>
+  s === "succeeded" || s === "passed"
+    ? "verified"
+    : s === "running"
+      ? "low"
+      : s === "failed"
+        ? "critical"
+        : "neutral";
 
 export function RunTimelineScreen() {
   const { id } = useParams<{ id: string }>();
@@ -94,93 +115,57 @@ export function RunTimelineScreen() {
     }
   };
 
-  if (loading) {
-    return <div data-testid="loading-indicator">Loading audit run timeline...</div>;
-  }
-
-  if (error || !run) {
-    return (
-      <div role="alert" style={{ color: "var(--critical)" }}>
-        Error loading run: {error || "Run not found"}
-      </div>
-    );
-  }
+  if (loading) return <Loading>Loading audit run timeline...</Loading>;
+  if (error || !run)
+    return <ErrorBanner>Error loading run: {error || "Run not found"}</ErrorBanner>;
 
   const durationSec =
     run.startedAt && run.endedAt
       ? Math.round((new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()) / 1000)
       : null;
+  const live = run.status === "running" || run.status === "queued";
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-      data-testid="run-timeline-screen"
-    >
-      {/* Run Overview Card */}
-      <div className="card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "12px",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span
-                className={`badge ${
-                  run.status === "succeeded"
-                    ? "badge-success"
-                    : run.status === "running"
-                      ? "badge-low"
-                      : run.status === "failed"
-                        ? "badge-critical"
-                        : "badge-info"
-                }`}
-                style={{ fontSize: "0.85rem", padding: "4px 10px" }}
-                data-testid="run-status-badge"
-              >
-                {run.status.toUpperCase()}
+    <div className="flex flex-col gap-6" data-testid="run-timeline-screen">
+      <Panel>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-xl font-bold font-headline tracking-tight">
+                Run #{run.id.slice(0, 8)}
+              </h2>
+              <span data-testid="run-status-badge">
+                <Pill tone={statusTone(run.status)} className="text-xs">
+                  {run.status.toUpperCase()}
+                </Pill>
               </span>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>Run {run.id.slice(0, 8)}</h2>
-              <span className="badge badge-info">{run.mode} mode</span>
+              <Pill>{run.mode}</Pill>
+              <Pill icon="bolt">Triggered by {run.trigger.kind.replace("_", " ")}</Pill>
             </div>
-            <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "6px" }}>
-              Git Ref: <code>{run.ref}</code>{" "}
+            <div className="mt-2 text-xs text-on-surface-variant">
+              Git Ref: <code className="font-mono text-on-surface">{run.ref}</code>{" "}
               {run.commitSha ? `(${run.commitSha.slice(0, 7)})` : ""} · Skill:{" "}
-              <code>{run.skillVersion}</code>
+              <code className="font-mono text-on-surface">{run.skillVersion}</code>
             </div>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.8rem",
-                color: liveConnected ? "var(--success)" : "var(--text-muted)",
-              }}
-              title="SSE live updates stream active"
+          <div className="flex items-center gap-3">
+            <span
+              title={live ? "SSE live updates stream active" : "Run is not streaming"}
               data-testid="live-sse-indicator"
+              className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant"
             >
               <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  backgroundColor: liveConnected ? "var(--success)" : "var(--text-muted)",
-                }}
+                className={cx(
+                  "h-2 w-2 rounded-full",
+                  liveConnected && live ? "bg-verified-ink animate-pulse" : "bg-outline-variant",
+                )}
               />
               <span>Live SSE</span>
-            </div>
-
-            {(run.status === "running" || run.status === "queued") && (
+            </span>
+            {live && (
               <button
                 type="button"
-                className="btn btn-danger btn-sm"
+                className={btn.danger}
                 onClick={handleCancelRun}
                 disabled={cancelling}
                 data-testid="cancel-run-button"
@@ -188,383 +173,261 @@ export function RunTimelineScreen() {
                 {cancelling ? "Cancelling..." : "Cancel Run"}
               </button>
             )}
-
-            <Link to={`/projects/${run.projectId}`} className="btn btn-secondary btn-sm">
+            <Link to={`/projects/${run.projectId}`} className={btn.secondary}>
               Back to Project
             </Link>
           </div>
         </div>
-
-        {/* Accounting & Resource Usage */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <span className="metric-label">Execution Time</span>
-            <span className="metric-value">
-              {durationSec !== null ? `${durationSec}s` : "In progress"}
-            </span>
-            <span className="metric-sub">
-              Started: {run.startedAt ? new Date(run.startedAt).toLocaleTimeString() : "Queued"}
-            </span>
-          </div>
-
-          <div className="metric-card">
-            <span className="metric-label">Token Cost</span>
-            <span className="metric-value">${run.usage.costUsd.toFixed(3)}</span>
-            <span className="metric-sub">USD estimated expenditure</span>
-          </div>
-
-          <div className="metric-card">
-            <span className="metric-label">Input Tokens</span>
-            <span className="metric-value">{run.usage.inputTokens.toLocaleString()}</span>
-            <span className="metric-sub">Prompt & context ingestion</span>
-          </div>
-
-          <div className="metric-card">
-            <span className="metric-label">Output Tokens</span>
-            <span className="metric-value">{run.usage.outputTokens.toLocaleString()}</span>
-            <span className="metric-sub">Generation & reasoning</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Validator Status & Report Artifacts */}
-      <div className="side-by-side">
-        {/* Validator Status Card */}
-        <div className="card" data-testid="validators-card">
-          <h3 className="card-title">Automated Skill Validators</h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-            Node.js validation checks enforcing skill schema integrity
-          </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "10px 14px",
-                backgroundColor: "var(--surface-raised)",
-                borderRadius: "var(--radius)",
-              }}
-            >
-              <div>
-                <strong>Findings Schema Validator</strong>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  validate-findings.cjs
-                </div>
-              </div>
-              <span
-                className={`badge ${
-                  run.validators.findings === "passed"
-                    ? "badge-success"
-                    : run.validators.findings === "failed"
-                      ? "badge-critical"
-                      : "badge-info"
-                }`}
-                data-testid="validator-findings-status"
-              >
-                {run.validators.findings}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "10px 14px",
-                backgroundColor: "var(--surface-raised)",
-                borderRadius: "var(--radius)",
-              }}
-            >
-              <div>
-                <strong>Coverage Ledger Validator</strong>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  validate-coverage-ledger.cjs
-                </div>
-              </div>
-              <span
-                className={`badge ${
-                  run.validators.coverageLedger === "passed"
-                    ? "badge-success"
-                    : run.validators.coverageLedger === "failed"
-                      ? "badge-critical"
-                      : "badge-info"
-                }`}
-                data-testid="validator-coverage-status"
-              >
-                {run.validators.coverageLedger}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Report Artifacts Card */}
-        <div className="card" data-testid="artifacts-card">
-          <h3 className="card-title">Generated Report Artifacts</h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-            Audit records and skill deliverables persisted to storage
-          </p>
-
+        {run.failureReason && (
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.85rem" }}
+            role="alert"
+            data-testid="failure-reason"
+            className="mt-4 rounded-md border border-sev-critical-border bg-sev-critical-bg text-sev-critical-ink px-4 py-3 text-xs"
           >
+            <strong>Run failed, so this is not a clean result:</strong> {run.failureReason}
+          </div>
+        )}
+        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Stat
+            label="Execution Time"
+            value={durationSec !== null ? `${durationSec}s` : "In progress"}
+            sub={`Started: ${run.startedAt ? new Date(run.startedAt).toLocaleTimeString() : "Queued"}`}
+          />
+          <Stat
+            label="Token Cost"
+            value={`$${run.usage.costUsd.toFixed(3)}`}
+            sub="USD estimated expenditure"
+          />
+          <Stat
+            label="Input Tokens"
+            value={run.usage.inputTokens.toLocaleString()}
+            sub="Prompt & context ingestion"
+          />
+          <Stat
+            label="Output Tokens"
+            value={run.usage.outputTokens.toLocaleString()}
+            sub="Generation & reasoning"
+          />
+        </div>
+      </Panel>
+
+      <Panel
+        testId="phases-card"
+        title="Pipeline Execution Phases"
+        subtitle="Sequential execution flow through the security-audit-skill lifecycle"
+      >
+        <ol className="flex flex-wrap gap-y-4 mb-5" aria-label="Pipeline stepper">
+          {run.phases.map((phase, i) => (
+            <li key={phase.name} className="flex items-center">
+              <div className="flex flex-col items-center gap-1.5 w-24">
+                <span
+                  className={cx(
+                    "h-8 w-8 rounded-full border-2 flex items-center justify-center text-xs font-bold",
+                    phase.status === "succeeded" &&
+                      "bg-verified-bg border-verified-ink text-verified-ink",
+                    phase.status === "running" &&
+                      "bg-sev-low-bg border-sev-low-ink text-sev-low-ink animate-pulse",
+                    phase.status === "failed" &&
+                      "bg-sev-critical-bg border-sev-critical-ink text-sev-critical-ink",
+                    phase.status !== "succeeded" &&
+                      phase.status !== "running" &&
+                      phase.status !== "failed" &&
+                      "border-outline-variant text-on-surface-variant",
+                  )}
+                >
+                  {phase.status === "succeeded" ? (
+                    <Icon name="check" className="text-[16px]" />
+                  ) : phase.status === "failed" ? (
+                    <Icon name="close" className="text-[16px]" />
+                  ) : (
+                    i + 1
+                  )}
+                </span>
+                <span className="text-[11px] font-medium capitalize text-center">{phase.name}</span>
+              </div>
+              {i < run.phases.length - 1 && (
+                <span className="h-px w-6 bg-outline-variant -mt-5" aria-hidden="true" />
+              )}
+            </li>
+          ))}
+        </ol>
+        <div className={tableCls.wrap}>
+          <table className={tableCls.table}>
+            <thead>
+              <tr className={tableCls.headRow}>
+                {["Phase", "Status", "Slices", "Tokens", "Cost"].map((h) => (
+                  <th key={h} className={tableCls.th}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {run.phases.map((phase) => (
+                <tr key={phase.name} className={tableCls.row}>
+                  <td className={`${tableCls.td} font-semibold capitalize`}>{phase.name}</td>
+                  <td className={tableCls.td}>
+                    <Pill tone={statusTone(phase.status)}>{phase.status}</Pill>
+                  </td>
+                  <td className={`${tableCls.td} font-mono`}>
+                    {phase.slicesDone} / {phase.sliceCount}
+                  </td>
+                  <td className={`${tableCls.td} font-mono`}>
+                    {(phase.usage.inputTokens + phase.usage.outputTokens).toLocaleString()}
+                  </td>
+                  <td className={`${tableCls.td} font-mono`}>${phase.usage.costUsd.toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Panel
+          testId="validators-card"
+          title="Automated Skill Validators"
+          subtitle="Node.js validation checks enforcing skill schema integrity"
+        >
+          <div className="flex flex-col gap-3">
+            {[
+              [
+                "Findings Schema Validator",
+                "validate-findings.cjs",
+                run.validators.findings,
+                "validator-findings-status",
+              ],
+              [
+                "Coverage Ledger Validator",
+                "validate-coverage-ledger.cjs",
+                run.validators.coverageLedger,
+                "validator-coverage-status",
+              ],
+            ].map(([name, file, status, testId]) => (
+              <div
+                key={testId}
+                className="flex items-center justify-between rounded-md bg-surface-container-low border border-outline-variant/40 px-3 py-2.5"
+              >
+                <div>
+                  <div className="text-sm font-semibold">{name}</div>
+                  <div className="text-[11px] font-mono text-on-surface-variant">{file}</div>
+                </div>
+                <span data-testid={testId}>
+                  <Pill tone={statusTone(String(status))}>{status}</Pill>
+                </span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel
+          testId="artifacts-card"
+          title="Generated Report Artifacts"
+          subtitle="Audit records and skill deliverables persisted to storage"
+        >
+          <div className="flex flex-col gap-2 text-xs">
             {Object.entries(run.artifacts).map(([key, path]) => (
               <div
                 key={key}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "6px 10px",
-                  borderBottom: "1px solid var(--border)",
-                }}
+                className="flex items-center justify-between rounded-md border border-outline-variant/40 px-3 py-2"
               >
-                <span style={{ fontWeight: 500 }}>{key}</span>
+                <span className="font-medium">{key}</span>
                 {path ? (
                   <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "0.8rem",
-                      color: "var(--primary)",
-                      cursor: "pointer",
-                    }}
                     title={path}
+                    className="inline-flex items-center gap-1 font-mono text-on-surface-variant"
                   >
-                    📄 {path.split("/").pop()}
+                    <Icon name="description" className="text-[14px]" />
+                    {path.split("/").pop()}
                   </span>
                 ) : (
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Pending</span>
+                  <span className="text-on-surface-variant">Pending</span>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       </div>
 
-      {/* Pipeline Phases */}
-      <div className="card" data-testid="phases-card">
-        <h3 className="card-title">Pipeline Execution Phases</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Sequential execution flow through the security-audit-skill lifecycle
-        </p>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {run.phases.map((phase) => (
+      <Panel
+        testId="slices-card"
+        title="Parallel Work Slices & Model Fallback Chains"
+        subtitle="Per-slice attempt log showing primary model routing and fallback attempts"
+      >
+        <div className="flex flex-col gap-4">
+          {slices.map((slice) => (
             <div
-              key={phase.name}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "12px 16px",
-                backgroundColor: "var(--surface-raised)",
-                borderRadius: "var(--radius)",
-                flexWrap: "wrap",
-                gap: "8px",
-              }}
+              key={slice.id}
+              data-testid={`slice-item-${slice.id}`}
+              className="rounded-md border border-outline-variant/50 p-4 flex flex-col gap-3"
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <span
-                  className={`badge ${
-                    phase.status === "succeeded"
-                      ? "badge-success"
-                      : phase.status === "running"
-                        ? "badge-low"
-                        : phase.status === "failed"
-                          ? "badge-critical"
-                          : "badge-info"
-                  }`}
-                >
-                  {phase.status}
-                </span>
-                <strong style={{ textTransform: "capitalize", fontSize: "0.95rem" }}>
-                  {phase.name}
-                </strong>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "20px",
-                  fontSize: "0.85rem",
-                  color: "var(--text-muted)",
-                }}
-              >
-                <span>
-                  Slices:{" "}
-                  <strong>
-                    {phase.slicesDone} / {phase.sliceCount}
-                  </strong>
-                </span>
-                <span>
-                  Tokens:{" "}
-                  <strong>
-                    {(phase.usage.inputTokens + phase.usage.outputTokens).toLocaleString()}
-                  </strong>
-                </span>
-                <span>
-                  Cost: <strong>${phase.usage.costUsd.toFixed(3)}</strong>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Pill tone={statusTone(slice.status)}>{slice.status}</Pill>
+                  <strong className="text-sm">{slice.label}</strong>
+                  {slice.attackClass && <Pill>{slice.attackClass}</Pill>}
+                </div>
+                <span className="text-[11px] text-on-surface-variant">
+                  Phase: {slice.phase} · {slice.attempts.length} Attempt(s)
                 </span>
               </div>
+              <ol className="flex flex-col gap-2">
+                {slice.attempts.map((att) => (
+                  <li
+                    key={att.attempt}
+                    data-testid={`slice-attempt-${slice.id}-${att.attempt}`}
+                    className={cx(
+                      "rounded-md border px-3 py-2.5 text-xs flex flex-col gap-1",
+                      att.status === "failed"
+                        ? "bg-sev-critical-bg/50 border-sev-critical-border"
+                        : "bg-surface-container-low border-outline-variant/40",
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold">Attempt #{att.attempt}:</span>
+                      <code className="font-mono">
+                        {att.model.adapter}/{att.model.model}
+                      </code>
+                      <Pill tone={statusTone(att.status)}>{att.status}</Pill>
+                    </div>
+                    {att.status === "failed" && att.errorCode && (
+                      <div className="text-sev-critical-ink">
+                        Failure: <strong>{att.errorCode}</strong> -{" "}
+                        {att.errorMessage || "Triggered secondary model fallback"}
+                      </div>
+                    )}
+                    <div className="text-on-surface-variant font-mono">
+                      Usage: {(att.usage.inputTokens + att.usage.outputTokens).toLocaleString()}{" "}
+                      tokens (${att.usage.costUsd.toFixed(3)})
+                    </div>
+                  </li>
+                ))}
+              </ol>
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
-      {/* Slices & Multi-Attempt Model Fallbacks */}
-      <div className="card" data-testid="slices-card">
-        <h3 className="card-title">Parallel Work Slices & Model Fallback Chains</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Per-slice attempt log showing primary model routing and fallback attempts
-        </p>
-
-        {slices.length === 0 ? (
-          <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-            No slices registered for this run.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {slices.map((slice) => (
-              <div
-                key={slice.id}
-                style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  overflow: "hidden",
-                }}
-                data-testid={`slice-item-${slice.id}`}
-              >
-                <div
-                  style={{
-                    backgroundColor: "var(--surface-raised)",
-                    padding: "10px 14px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      className={`badge ${
-                        slice.status === "succeeded"
-                          ? "badge-success"
-                          : slice.status === "failed"
-                            ? "badge-critical"
-                            : "badge-info"
-                      }`}
-                    >
-                      {slice.status}
-                    </span>
-                    <strong style={{ fontSize: "0.9rem" }}>{slice.label}</strong>
-                    {slice.attackClass && (
-                      <span className="badge badge-info">{slice.attackClass}</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                    Phase: {slice.phase} · {slice.attempts.length} Attempt(s)
-                  </span>
-                </div>
-
-                {/* Per-attempt details showing fallback chain */}
-                <div
-                  style={{
-                    padding: "12px 14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  {slice.attempts.map((att) => (
-                    <div
-                      key={att.attempt}
-                      style={{
-                        padding: "8px 12px",
-                        backgroundColor:
-                          att.status === "failed" ? "var(--critical-bg)" : "var(--surface)",
-                        border: `1px solid ${att.status === "failed" ? "var(--critical-border)" : "var(--border)"}`,
-                        borderRadius: "6px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "8px",
-                        fontSize: "0.85rem",
-                      }}
-                      data-testid={`slice-attempt-${slice.id}-${att.attempt}`}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontWeight: 700 }}>Attempt #{att.attempt}:</span>
-                        <code style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                          {att.model.adapter}/{att.model.model}
-                        </code>
-                        <span
-                          className={`badge ${
-                            att.status === "succeeded"
-                              ? "badge-success"
-                              : att.status === "failed"
-                                ? "badge-critical"
-                                : "badge-info"
-                          }`}
-                        >
-                          {att.status}
-                        </span>
-                      </div>
-
-                      {att.status === "failed" && att.errorCode && (
-                        <div style={{ color: "var(--critical)", fontSize: "0.8rem" }}>
-                          Failure: <strong>{att.errorCode}</strong> -{" "}
-                          {att.errorMessage || "Triggered secondary model fallback"}
-                        </div>
-                      )}
-
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                        Usage: {(att.usage.inputTokens + att.usage.outputTokens).toLocaleString()}{" "}
-                        tokens (${att.usage.costUsd.toFixed(3)})
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SSE Real-Time Event Log */}
-      <div className="card" data-testid="events-stream-card">
-        <h3 className="card-title">Live Event Stream Log</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Real-time event ledger dispatched over SSE (sdap:events)
-        </p>
-
+      <Panel
+        testId="events-stream-card"
+        title="Live Event Stream Log"
+        subtitle="Real-time event ledger dispatched over SSE (sdap:events)"
+      >
         <div
-          style={{
-            maxHeight: "220px",
-            overflowY: "auto",
-            backgroundColor: "var(--surface-raised)",
-            borderRadius: "var(--radius)",
-            padding: "10px",
-            fontSize: "0.8rem",
-            fontFamily: "var(--font-mono)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
+          role="log"
+          aria-live="polite"
+          className="max-h-56 overflow-y-auto rounded-lg bg-[#0B0F19] border border-zinc-800 p-3 font-mono text-xs flex flex-col gap-1"
         >
           {events.map((ev) => (
-            <div key={ev.id} style={{ display: "flex", gap: "8px" }}>
-              <span style={{ color: "var(--text-muted)" }}>[{ev.seq}]</span>
-              <span style={{ color: "var(--text-muted)" }}>{ev.at.slice(11, 19)}</span>
-              <strong style={{ color: "var(--primary)" }}>{ev.type}</strong>
-              <span>{JSON.stringify(ev.payload)}</span>
+            <div key={ev.id} className="flex gap-2 text-zinc-300">
+              <span className="text-zinc-500">[{ev.seq}]</span>
+              <span className="text-zinc-500">{ev.at.slice(11, 19)}</span>
+              <strong className="text-emerald-400">{ev.type}</strong>
+              <span className="break-all text-zinc-400">{JSON.stringify(ev.payload)}</span>
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

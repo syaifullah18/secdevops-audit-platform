@@ -19,6 +19,37 @@ export interface AppConfig {
   webhookSecrets: Record<string, string>;
   /** Skill commit recorded on queued runs; the worker overwrites it with the real pin. */
   skillVersion: string;
+  /** Honour X-Forwarded-For (set when a reverse proxy terminates TLS in front of the API). */
+  trustProxy: boolean;
+  accounts: AccountsConfig;
+}
+
+export interface OAuthProviderConfig {
+  clientId: string;
+  clientSecret: string;
+}
+
+/** Native accounts: sign-up, password login, sessions, API tokens, invitations. Off by default. */
+export interface AccountsConfig {
+  enabled: boolean;
+  signupMode: "open" | "invite" | "closed";
+  /** Email + password sign-in. Off leaves provider sign-in only. */
+  passwordLogin: boolean;
+  requireEmailVerification: boolean;
+  defaultRole: "viewer" | "developer" | "devops" | "security";
+  /** Public URL of the web app, used in email links and OAuth redirects back. */
+  webBaseUrl: string;
+  /** Public URL of the API as browsers reach it (OAuth redirect URI base). */
+  apiPublicUrl: string;
+  /** When set, only this address can become the first admin; otherwise the first sign-up does. */
+  bootstrapAdminEmail?: string;
+  sessionTtlDays: number;
+  /** Signs OAuth state. Required when a provider is configured (`openssl rand -hex 32`). */
+  secret?: string;
+  smtpUrl?: string;
+  mailFrom: string;
+  google?: OAuthProviderConfig;
+  github?: OAuthProviderConfig;
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -44,11 +75,50 @@ const parseSecrets = (raw: string | undefined): Record<string, string> => {
   return out;
 };
 
+const oauthFrom = (id: string | undefined, secret: string | undefined) =>
+  id && secret ? { clientId: id, clientSecret: secret } : undefined;
+
+const oneOf = <T extends string>(raw: string | undefined, allowed: readonly T[], fallback: T): T =>
+  allowed.includes(raw as T) ? (raw as T) : fallback;
+
+const loadAccountsConfig = (env: Env): AccountsConfig => {
+  const smtpUrl = env["SMTP_URL"] || undefined;
+  const google = oauthFrom(env["GOOGLE_CLIENT_ID"], env["GOOGLE_CLIENT_SECRET"]);
+  const github = oauthFrom(env["GITHUB_CLIENT_ID"], env["GITHUB_CLIENT_SECRET"]);
+  return {
+    enabled: env["AUTH_NATIVE"] === "true",
+    signupMode: oneOf(env["SIGNUP_MODE"], ["open", "invite", "closed"] as const, "invite"),
+    passwordLogin: env["PASSWORD_LOGIN"] !== "false",
+    // Verification needs a mailbox: default on only when mail can be delivered.
+    requireEmailVerification:
+      env["REQUIRE_EMAIL_VERIFICATION"] !== undefined
+        ? env["REQUIRE_EMAIL_VERIFICATION"] === "true"
+        : smtpUrl !== undefined,
+    defaultRole: oneOf(
+      env["SIGNUP_DEFAULT_ROLE"],
+      ["viewer", "developer", "devops", "security"] as const,
+      "viewer",
+    ),
+    webBaseUrl: (env["WEB_BASE_URL"] || "http://localhost:5173").replace(/\/+$/, ""),
+    apiPublicUrl: (env["API_PUBLIC_URL"] || "http://localhost:8080").replace(/\/+$/, ""),
+    ...(env["BOOTSTRAP_ADMIN_EMAIL"]
+      ? { bootstrapAdminEmail: env["BOOTSTRAP_ADMIN_EMAIL"].trim().toLowerCase() }
+      : {}),
+    sessionTtlDays: Number(env["SESSION_TTL_DAYS"] ?? 14) || 14,
+    ...(smtpUrl ? { smtpUrl } : {}),
+    ...(env["AUTH_SECRET"] ? { secret: env["AUTH_SECRET"] } : {}),
+    mailFrom: env["MAIL_FROM"] || "SecDevOps Audit <no-reply@localhost>",
+    ...(google ? { google } : {}),
+    ...(github ? { github } : {}),
+  };
+};
+
 /** Reads configuration from the environment; `overrides` win (used by tests). */
-export const loadConfig = (
-  overrides: Partial<AppConfig> = {},
-  env: Env = process.env,
-): AppConfig => {
+export type ConfigOverrides = Omit<Partial<AppConfig>, "accounts"> & {
+  accounts?: Partial<AccountsConfig>;
+};
+
+export const loadConfig = (overrides: ConfigOverrides = {}, env: Env = process.env): AppConfig => {
   const nodeEnv = overrides.nodeEnv ?? parseNodeEnv(env["NODE_ENV"]);
   const devRequested = overrides.authDevMode ?? env["AUTH_DEV_MODE"] === "true";
   return {
@@ -65,5 +135,7 @@ export const loadConfig = (
     redisUrl: overrides.redisUrl ?? (env["REDIS_URL"] || "redis://localhost:6379"),
     webhookSecrets: overrides.webhookSecrets ?? parseSecrets(env["WEBHOOK_SECRETS"]),
     skillVersion: overrides.skillVersion ?? (env["SKILL_VERSION"] || "unpinned"),
+    trustProxy: overrides.trustProxy ?? env["TRUST_PROXY"] === "true",
+    accounts: { ...loadAccountsConfig(env), ...overrides.accounts },
   };
 };

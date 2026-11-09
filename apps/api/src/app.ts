@@ -2,8 +2,12 @@ import fastify, { type FastifyInstance } from "fastify";
 import type { Store } from "@sdap/core";
 import { ZodError } from "zod";
 import { writeAuditLog } from "./audit.js";
-import { type AuthVerifier, createAuthVerifier } from "./auth.js";
-import { type AppConfig, loadConfig } from "./config.js";
+import { type AuthVerifier, createAuthVerifier, hasExternalAuth } from "./auth.js";
+import { accountRoutes, authPublicRoutes } from "./accounts/routes.js";
+import type { OAuthFlow } from "./accounts/oauth.js";
+import type { AccountService } from "./accounts/service.js";
+import { CompositeAuthVerifier, NativeAuthVerifier } from "./accounts/verifier.js";
+import { type ConfigOverrides, loadConfig } from "./config.js";
 import { formatZodError, HttpError, NotFoundError } from "./errors.js";
 import type { Queue } from "./queue.js";
 import { createAuthPreHandler } from "./rbac.js";
@@ -18,9 +22,12 @@ import { type SdapMetrics, createMetrics } from "./metrics.js";
 export interface BuildAppOptions {
   store: Store;
   queue: Queue;
+  /** Native accounts (sign-up, sessions, API tokens). Enabled by `AUTH_NATIVE=true`. */
+  accounts?: AccountService;
+  oauth?: OAuthFlow | null;
   /** Defaults to the verifier described by `config` (OIDC, or dev tokens outside production). */
   auth?: AuthVerifier;
-  config?: Partial<AppConfig>;
+  config?: ConfigOverrides;
   /** Metrics registry and handles; created by default if not passed. */
   metrics?: SdapMetrics;
   /** Optional bearer token for `/metrics`. */
@@ -36,9 +43,21 @@ export interface BuildAppOptions {
 /** Dependency-injected app factory: no globals, nothing is read from the environment but `config`. */
 export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstance> => {
   const config = loadConfig(options.config);
-  const auth = options.auth ?? createAuthVerifier(config);
+  if (config.accounts.enabled && !options.accounts) {
+    throw new Error("AUTH_NATIVE is on but no account store was provided");
+  }
+  const external = options.auth ?? (hasExternalAuth(config) ? createAuthVerifier(config) : null);
+  const auth: AuthVerifier | null = options.accounts
+    ? new CompositeAuthVerifier(new NativeAuthVerifier(options.accounts), external)
+    : external;
+  if (!auth) {
+    // Same message as before: the API never starts open.
+    createAuthVerifier(config);
+    throw new Error("Authentication is not configured");
+  }
 
   const app = fastify({
+    trustProxy: config.trustProxy,
     logger:
       config.logLevel === "silent" && !options.logStream
         ? false
@@ -101,8 +120,15 @@ export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstanc
         secretResolver: options.webhookSecretResolver,
         secrets: config.webhookSecrets,
       });
+      if (options.accounts) {
+        await api.register(authPublicRoutes, {
+          accounts: options.accounts,
+          oauth: options.oauth ?? null,
+        });
+      }
       await api.register(async (secured) => {
         secured.addHook("preHandler", createAuthPreHandler(auth));
+        if (options.accounts) await secured.register(accountRoutes, { accounts: options.accounts });
         await secured.register(projectRoutes, { store: options.store });
         await secured.register(runRoutes, {
           store: options.store,

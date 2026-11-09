@@ -1,5 +1,7 @@
+import pg from "pg";
+import { createAccounts } from "./accounts/index.js";
 import { buildApp } from "./app.js";
-import { createAuthVerifier } from "./auth.js";
+import { createAuthVerifier, hasExternalAuth } from "./auth.js";
 import { loadConfig } from "./config.js";
 import { createPgStore } from "./db/index.js";
 import { BullMqQueue } from "./queue.js";
@@ -11,15 +13,19 @@ const start = async () => {
     throw new Error("DATABASE_URL environment variable is required to start the API");
   }
 
-  const store = createPgStore(config.databaseUrl);
+  const pool = new pg.Pool({ connectionString: config.databaseUrl });
+  const store = createPgStore(pool);
   const queue = new BullMqQueue(config.redisUrl ?? "redis://localhost:6379");
-  const auth = createAuthVerifier(config);
+  const accounts = config.accounts.enabled ? createAccounts(config, pool) : null;
+  // With native accounts, OIDC is optional; without them, the API refuses to start unauthenticated.
+  const auth = !accounts || hasExternalAuth(config) ? createAuthVerifier(config) : undefined;
   if (config.authDevMode) console.warn("AUTH_DEV_MODE is on: static dev tokens are accepted");
 
   const app = await buildApp({
     store,
     queue,
-    auth,
+    ...(auth ? { auth } : {}),
+    ...(accounts ? { accounts: accounts.service, oauth: accounts.oauth } : {}),
     config,
   });
 
@@ -35,6 +41,7 @@ const start = async () => {
       await app.close();
       await queue.close();
       await store.close();
+      await pool.end();
       process.exit(0);
     } catch (err) {
       console.error("Error during graceful shutdown:", err);

@@ -273,3 +273,123 @@ export const decisions = pgTable(
     index("decisions_key_idx").on(table.key),
   ],
 );
+
+// ---------------------------------------------------------------------------------------------
+// Native accounts (AUTH_NATIVE=true). See apps/api/src/accounts and docs/decisions.md D-018.
+// ---------------------------------------------------------------------------------------------
+
+export const accountUsers = pgTable(
+  "account_users",
+  {
+    id: uuid("id").primaryKey(),
+    /** Lower-cased. */
+    email: varchar("email", { length: 254 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    passwordHash: text("password_hash"),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true, mode: "string" }),
+    roles: jsonb("roles").$type<string[]>().notNull(),
+    /** `"*"` or a list of client ids. */
+    clientIds: jsonb("client_ids").$type<string[] | "*">().notNull(),
+    team: varchar("team", { length: 64 }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true, mode: "string" }),
+    failedLogins: integer("failed_logins").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [uniqueIndex("account_users_email_uq").on(t.email)],
+);
+
+/** Sessions and API tokens. Only the SHA-256 of the secret is stored. */
+export const accessTokens = pgTable(
+  "access_tokens",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => accountUsers.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"session" | "api_token">().notNull(),
+    name: varchar("name", { length: 100 }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    prefix: varchar("prefix", { length: 24 }).notNull(),
+    roles: jsonb("roles").$type<string[] | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true, mode: "string" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+    ip: varchar("ip", { length: 64 }),
+    userAgent: varchar("user_agent", { length: 300 }),
+  },
+  (t) => [
+    uniqueIndex("access_tokens_hash_uq").on(t.tokenHash),
+    index("access_tokens_user_idx").on(t.userId, t.kind),
+  ],
+);
+
+export const oneTimeTokens = pgTable(
+  "one_time_tokens",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => accountUsers.id, { onDelete: "cascade" }),
+    purpose: text("purpose")
+      .$type<"verify_email" | "reset_password" | "oauth_exchange">()
+      .notNull(),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+  },
+  (t) => [uniqueIndex("one_time_tokens_hash_uq").on(t.tokenHash)],
+);
+
+export const accountIdentities = pgTable(
+  "account_identities",
+  {
+    provider: varchar("provider", { length: 32 }).notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => accountUsers.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 254 }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.provider, t.subject] }),
+    index("account_identities_user_idx").on(t.userId),
+  ],
+);
+
+export const accountInvitations = pgTable(
+  "account_invitations",
+  {
+    id: uuid("id").primaryKey(),
+    email: varchar("email", { length: 254 }).notNull(),
+    roles: jsonb("roles").$type<string[]>().notNull(),
+    clientIds: jsonb("client_ids").$type<string[] | "*">().notNull(),
+    team: varchar("team", { length: 64 }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    invitedBy: varchar("invited_by", { length: 254 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: "string" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [uniqueIndex("account_invitations_hash_uq").on(t.tokenHash)],
+);
+
+/** Account and admin events. Append-only; survives deletion of the user it describes. */
+export const accountAudit = pgTable(
+  "account_audit",
+  {
+    id: uuid("id").primaryKey(),
+    at: timestamp("at", { withTimezone: true, mode: "string" }).notNull(),
+    actor: varchar("actor", { length: 254 }).notNull(),
+    action: varchar("action", { length: 64 }).notNull(),
+    target: varchar("target", { length: 255 }),
+    ip: varchar("ip", { length: 64 }),
+    details: jsonb("details").$type<Record<string, unknown> | null>(),
+  },
+  (t) => [index("account_audit_at_idx").on(t.at)],
+);

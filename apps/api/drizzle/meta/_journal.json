@@ -8,6 +8,13 @@
       "when": 1794053818325,
       "tag": "0000_productive_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794185622937,
+      "tag": "0001_native_accounts",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,10 @@ export interface AuthUser {
   clientIds: string[] | "*";
   /** Team slug, used to limit what a developer may triage. */
   team?: string;
+  /** Set for native accounts: the account id, and the session or API token that authenticated. */
+  accountId?: string;
+  tokenId?: string;
+  tokenKind?: "session" | "api_token";
 }
 
 export interface AuthVerifier {
@@ -167,6 +171,9 @@ export class OidcAuthVerifier implements AuthVerifier {
     return claimsToUser(payload);
   }
 }
+
+export const hasExternalAuth = (config: AppConfig): boolean =>
+  Boolean(config.oidcIssuerUrl || config.oidcJwksUrl || config.authDevMode);
 
 /** Throws when neither OIDC nor dev mode is configured: the API never starts open. */
 export const createAuthVerifier = (config: AppConfig): AuthVerifier => {

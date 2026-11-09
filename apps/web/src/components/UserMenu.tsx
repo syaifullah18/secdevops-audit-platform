@@ -57,13 +57,13 @@ export function UserMenu() {
             </div>
           </div>
           <Link
-            to="/profile"
+            to="/account"
             role="menuitem"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm hover:bg-surface-container transition-colors"
           >
             <Icon name="person" className="text-[18px] text-on-surface-variant" />
-            Profile & access
+            Account & security
           </Link>
           <button
             type="button"

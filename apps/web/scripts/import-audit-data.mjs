@@ -31,9 +31,22 @@ const slugOf = (s) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 const clip = (s, n) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s || "");
-const SEV = { critical: "critical", high: "high", medium: "medium", low: "low", info: "informational", informational: "informational" };
+const SEV = {
+  critical: "critical",
+  high: "high",
+  medium: "medium",
+  low: "low",
+  info: "informational",
+  informational: "informational",
+};
 const SLA = { critical: 7, high: 30, medium: 90, low: 180 };
-const VERDICT = { CONFIRMED: "confirmed", PLAUSIBLE: "needs_validation", PARTIAL: "needs_validation", REFUTED: "rejected", REJECTED: "rejected" };
+const VERDICT = {
+  CONFIRMED: "confirmed",
+  PLAUSIBLE: "needs_validation",
+  PARTIAL: "needs_validation",
+  REFUTED: "rejected",
+  REJECTED: "rejected",
+};
 
 const CWE_CLASS = [
   ["authz", [639, 862, 863, 285, 284, 269, 915]],
@@ -47,14 +60,23 @@ const CWE_CLASS = [
   ["config", [16, 1004, 614, 552, 489, 1188]],
   ["data_isolation", [200, 201, 359, 497]],
 ];
-const HUNTER_CLASS = { AUTHN: "authn", AUTHZ: "authz", INJECT: "injection", CONFIG: "config", CLIENT: "client_side" };
+const HUNTER_CLASS = {
+  AUTHN: "authn",
+  AUTHZ: "authz",
+  INJECT: "injection",
+  CONFIG: "config",
+  CLIENT: "client_side",
+};
 const attackClassOf = (cwe, hunterId) => {
   const n = Number(String(cwe || "").replace(/\D/g, ""));
   for (const [cls, list] of CWE_CLASS) if (list.includes(n)) return cls;
   return HUNTER_CLASS[String(hunterId || "").split("-")[0]] ?? "other";
 };
 const adapterOf = (m) => (/claude/i.test(m) ? "anthropic" : /gemini/i.test(m) ? "google" : "other");
-const modelOf = (m) => String(m || "unknown").replace(/\s*\(.*\)\s*$/, "").trim() || "unknown";
+const modelOf = (m) =>
+  String(m || "unknown")
+    .replace(/\s*\(.*\)\s*$/, "")
+    .trim() || "unknown";
 
 /** "src/a/B.java:380-440: text" -> evidence item; lines without file:line are skipped. */
 const parseEvidence = (lines) =>
@@ -64,7 +86,13 @@ const parseEvidence = (lines) =>
     .map((m) => ({ file: m[1], line: Number(m[2]), description: clip(m[3] || m[1], 300) }));
 
 const slugs = [];
-const out = { projects: [], runs: [], slices: [], findings: [], generatedAt: new Date().toISOString() };
+const out = {
+  projects: [],
+  runs: [],
+  slices: [],
+  findings: [],
+  generatedAt: new Date().toISOString(),
+};
 
 for (const dir of readdirSync(root).sort()) {
   const runDir = join(root, dir, "run-1");
@@ -73,8 +101,12 @@ for (const dir of readdirSync(root).sort()) {
   slugs.push(slug);
   const projectId = uuid(`project:${slug}`);
   const runId = uuid(`run:${slug}:1`);
-  const meta = existsSync(join(runDir, "run-metadata.json")) ? json(join(runDir, "run-metadata.json")) : {};
-  const ledger = existsSync(join(runDir, "coverage-ledger.json")) ? json(join(runDir, "coverage-ledger.json")) : {};
+  const meta = existsSync(join(runDir, "run-metadata.json"))
+    ? json(join(runDir, "run-metadata.json"))
+    : {};
+  const ledger = existsSync(join(runDir, "coverage-ledger.json"))
+    ? json(join(runDir, "coverage-ledger.json"))
+    : {};
   const day = "2026-11-07";
   const t = (hhmm) => `${day}T${hhmm}:00Z`;
 
@@ -103,7 +135,9 @@ for (const dir of readdirSync(root).sort()) {
         verifier: f.verifier_model,
         hunterId: f.hunter_id,
         owner: null,
-        blockers: (f.refutation_attempts ?? []).filter((r) => /^did not|^could not|^cannot/i.test(r)),
+        blockers: (f.refutation_attempts ?? []).filter((r) =>
+          /^did not|^could not|^cannot/i.test(r),
+        ),
         reason: f.reasoning,
       });
     }
@@ -120,7 +154,9 @@ for (const dir of readdirSync(root).sort()) {
         verified: SEV[f.verified_severity] ?? null,
         description: f.attack_scenario,
         rootCause: null,
-        evidence: [{ file: f.file, line: f.line, description: clip(f.code_excerpt || f.title, 300) }],
+        evidence: [
+          { file: f.file, line: f.line, description: clip(f.code_excerpt || f.title, 300) },
+        ],
         flow: f.data_flow,
         reach: f.exploit_preconditions,
         confidence: ["low", "medium", "high"].includes(f.confidence) ? f.confidence : null,
@@ -140,10 +176,22 @@ for (const dir of readdirSync(root).sort()) {
     const cls = attackClassOf(r.cwe, r.hunterId);
     const file = String(r.file || "unknown").replace(/^\/+/, "");
     const line = Number.isInteger(r.line) && r.line > 0 ? r.line : 1;
-    const evidence = r.evidence.length ? r.evidence : [{ file, line, description: clip(r.title, 300) }];
-    const steps = r.evidence.length > 1 ? r.evidence : [{ file, line, description: clip(r.flow || r.reach || r.title, 300) }];
+    const evidence = r.evidence.length
+      ? r.evidence
+      : [{ file, line, description: clip(r.title, 300) }];
+    const steps =
+      r.evidence.length > 1
+        ? r.evidence
+        : [{ file, line, description: clip(r.flow || r.reach || r.title, 300) }];
     const trace = steps.slice(0, 6).map((s, i, a) => ({
-      kind: a.length === 1 ? "sink" : i === 0 ? "entrypoint" : i === a.length - 1 ? "sink" : "propagation",
+      kind:
+        a.length === 1
+          ? "sink"
+          : i === 0
+            ? "entrypoint"
+            : i === a.length - 1
+              ? "sink"
+              : "propagation",
       file: s.file,
       line: s.line,
       scope: s.file.split("/").pop(),
@@ -176,12 +224,20 @@ for (const dir of readdirSync(root).sort()) {
       lastSeen: t("09:00"),
       slaDue:
         r.verdict === "confirmed" && SLA[r.verified]
-          ? new Date(Date.parse(t("09:00")) + SLA[r.verified] * 864e5).toISOString().replace(".000Z", "Z")
+          ? new Date(Date.parse(t("09:00")) + SLA[r.verified] * 864e5)
+              .toISOString()
+              .replace(".000Z", "Z")
           : null,
       model: { adapter: adapterOf(model), model },
       phase: "record_verify",
-      blockers: needs ? (r.blockers.length ? r.blockers.map((b) => clip(b, 240)) : ["Needs a deployment or runtime check; cannot be proven from source alone."]) : [],
-      rejectionReason: rejected ? clip(r.reason || "Refuted by the adversarial verifier.", 400) : null,
+      blockers: needs
+        ? r.blockers.length
+          ? r.blockers.map((b) => clip(b, 240))
+          : ["Needs a deployment or runtime check; cannot be proven from source alone."]
+        : [],
+      rejectionReason: rejected
+        ? clip(r.reason || "Refuted by the adversarial verifier.", 400)
+        : null,
       remediation: r.fix && !rejected ? { strategy: clip(r.fix, 1200), codeChanges: [] } : null,
       triageSuggestion: null,
       rootCauseGroup: null,
@@ -191,7 +247,11 @@ for (const dir of readdirSync(root).sort()) {
 
   // ---- slices & run ------------------------------------------------------------------------
   const sliceModels = ledger.slices && !Array.isArray(ledger.slices) ? ledger.slices : null;
-  const names = sliceModels ? Object.keys(sliceModels) : ["core", "vendor", "pdc"].filter((n) => existsSync(join(runDir, "hunt", `findings-${n}.json`)));
+  const names = sliceModels
+    ? Object.keys(sliceModels)
+    : ["core", "vendor", "pdc"].filter((n) =>
+        existsSync(join(runDir, "hunt", `findings-${n}.json`)),
+      );
   names.forEach((name, i) => {
     const model = modelOf(sliceModels ? sliceModels[name] : "gemini-4-argon-high");
     const start = t(`09:${String(10 + i * 4).padStart(2, "0")}`);
@@ -244,7 +304,12 @@ for (const dir of readdirSync(root).sort()) {
     commitSha: sha,
     baseCommitSha: null,
     previousRunId: null,
-    scope: { paths: (meta.scope_paths ?? []).filter((p) => !p.startsWith("/") && !p.includes("..")), attackClasses: [], maxRuntimeSec: 14400, tokenBudget: null },
+    scope: {
+      paths: (meta.scope_paths ?? []).filter((p) => !p.startsWith("/") && !p.includes("..")),
+      attackClasses: [],
+      maxRuntimeSec: 14400,
+      tokenBudget: null,
+    },
     status: "succeeded",
     phases: [
       phase("recon", "09:00", "09:10", 1),
@@ -287,7 +352,9 @@ for (const dir of readdirSync(root).sort()) {
     updatedAt: t("10:30"),
   });
   const c = (v) => mine.filter((f) => f.verdict === v).length;
-  console.log(`${dir}: ${mine.length} findings (${c("confirmed")} confirmed, ${c("needs_validation")} need validation, ${c("rejected")} rejected), ${names.length} slices`);
+  console.log(
+    `${dir}: ${mine.length} findings (${c("confirmed")} confirmed, ${c("needs_validation")} need validation, ${c("rejected")} rejected), ${names.length} slices`,
+  );
 }
 
 const dest = join(dirname(fileURLToPath(import.meta.url)), "../src/api/audit-data.generated.json");

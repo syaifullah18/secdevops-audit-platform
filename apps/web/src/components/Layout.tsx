@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { api } from "../api/client.js";
+import { useApp } from "../context/AppContext.js";
 import { CommandPaletteModal } from "./CommandPaletteModal.js";
 import { Icon } from "./Icon.js";
 import { ThemeToggle } from "./ui/ThemeToggle.js";
@@ -25,6 +26,8 @@ interface NavItem {
 export function pageTitleFor(path: string): string {
   if (path === "/" || path === "/overview") return "Organization Overview";
   if (path === "/projects") return "Projects";
+  if (path === "/account" || path === "/profile") return "Account";
+  if (path === "/admin") return "Administration";
   if (path.startsWith("/projects/")) return "Project Details";
   if (path.startsWith("/runs/")) return "Run Timeline & Diagnostics";
   if (path.startsWith("/findings/")) return "Finding Inspection & Triage";
@@ -33,7 +36,6 @@ export function pageTitleFor(path: string): string {
   if (path === "/release-readiness") return "Release Readiness & Gate Status";
   if (path === "/export") return "Compliance Audit Export";
   if (path === "/styleguide") return "Design System";
-  if (path === "/profile") return "Profile & Access";
   return "SecDevOps Audit Platform";
 }
 
@@ -85,6 +87,7 @@ export function Layout() {
 
   const closePalette = useCallback(() => setPaletteOpen(false), []);
 
+  const { user } = useApp();
   const nav: NavItem[] = [
     { to: "/", label: "Org Overview", icon: "dashboard", testId: "nav-overview", end: true },
     {
@@ -110,6 +113,16 @@ export function Layout() {
     },
     { to: "/policy", label: "Policy & Exceptions", icon: "policy", testId: "nav-policy" },
     { to: "/export", label: "Audit Export", icon: "download", testId: "nav-export" },
+    ...(user?.roles.includes("admin")
+      ? [
+          {
+            to: "/admin",
+            label: "Administration",
+            icon: "admin_panel_settings",
+            testId: "nav-admin",
+          },
+        ]
+      : []),
   ];
 
   const isActive = (item: NavItem): boolean => {

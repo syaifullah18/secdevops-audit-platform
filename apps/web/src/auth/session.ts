@@ -4,8 +4,9 @@ import { Role } from "@sdap/core";
  * Client-side session. The browser never verifies a token: it decodes claims only to show who is
  * signed in. The API verifies the signature, issuer, audience and expiry on every request.
  *
- * The token lives in sessionStorage (cleared with the tab), never localStorage and never a URL.
- * A browser OIDC authorisation-code flow with PKCE is the better long-term answer (follow-up).
+ * The token lives in localStorage so a session survives tabs and restarts (native sessions last
+ * days and can be revoked from the account page). It is never put in a URL. A script injected into
+ * the page could read it, which is why the web server sends a strict Content-Security-Policy; see docs/decisions.md D-019.
  */
 export interface SessionUser {
   subject: string;
@@ -18,6 +19,9 @@ export interface SessionUser {
   /** Epoch ms, or null when the token has no `exp`. */
   expiresAt: number | null;
   demo: boolean;
+  /** Signed in with an account managed by this instance (not a pasted OIDC token). */
+  native?: boolean;
+  email?: string;
 }
 
 const TOKEN_KEY = "sdap_token";
@@ -26,7 +30,7 @@ export const UNAUTHORIZED_EVENT = "sdap:unauthorized";
 
 const store = (): Storage | null => {
   try {
-    return typeof sessionStorage === "undefined" ? null : sessionStorage;
+    return typeof localStorage === "undefined" ? null : localStorage;
   } catch {
     return null;
   }
@@ -39,8 +43,23 @@ export const setToken = (token: string): void => {
   store()?.removeItem(SIGNED_OUT_KEY);
 };
 
+const USER_KEY = "sdap_user";
+
+/** Last known profile of the signed-in account, so the shell can render before /account answers. */
+export const getStoredUser = (): SessionUser | null => {
+  try {
+    const raw = store()?.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as SessionUser) : null;
+  } catch {
+    return null;
+  }
+};
+export const setStoredUser = (u: SessionUser): void =>
+  store()?.setItem(USER_KEY, JSON.stringify(u));
+
 export const clearSession = (): void => {
   store()?.removeItem(TOKEN_KEY);
+  store()?.removeItem(USER_KEY);
   store()?.setItem(SIGNED_OUT_KEY, "1");
 };
 
@@ -107,6 +126,36 @@ export function decodeToken(token: string): SessionUser | null {
   }
 }
 
+/** Native credentials are opaque (`sdap_s_…`); only the API can say who they belong to. */
+export const isNativeToken = (t: string): boolean => t.startsWith("sdap_");
+
+export interface AccountView {
+  id: string;
+  email: string;
+  name: string;
+  roles: Role[];
+  clientIds: string[] | "*";
+  team: string | null;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  disabled?: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+export const userFromAccount = (a: AccountView, expiresAt: number | null): SessionUser => ({
+  subject: a.email,
+  email: a.email,
+  name: a.name,
+  initials: initialsOf(a.name || a.email),
+  roles: a.roles,
+  team: a.team,
+  clientIds: a.clientIds,
+  expiresAt,
+  demo: false,
+  native: true,
+});
+
 export const isExpired = (u: SessionUser, now = Date.now()): boolean =>
   u.expiresAt !== null && u.expiresAt <= now;
 
@@ -115,7 +164,7 @@ export const DEMO_USER: SessionUser = {
   subject: "demo.user@example.test",
   name: "Alex Vance",
   initials: "AV",
-  roles: ["security"],
+  roles: ["admin"],
   team: "secops",
   clientIds: "*",
   expiresAt: null,

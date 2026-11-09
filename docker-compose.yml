@@ -64,6 +64,24 @@ services:
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
       AUTH_DEV_MODE: ${AUTH_DEV_MODE:-false}
+      # Native accounts (sign-up, password and provider sign-in). See deploy/README.md "Public hosting".
+      AUTH_NATIVE: ${AUTH_NATIVE:-false}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      SIGNUP_MODE: ${SIGNUP_MODE:-invite}
+      PASSWORD_LOGIN: ${PASSWORD_LOGIN:-true}
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-}
+      SIGNUP_DEFAULT_ROLE: ${SIGNUP_DEFAULT_ROLE:-viewer}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-14}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       SDAP_TELEMETRY: ${SDAP_TELEMETRY:-off}
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"

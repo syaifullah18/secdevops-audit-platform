@@ -64,7 +64,7 @@ describe("session helpers", () => {
 
 describe("auth flow (mock API)", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     mockStore.reset();
     return installFetchShim(mockStore);
   });
@@ -85,25 +85,25 @@ describe("auth flow (mock API)", () => {
   });
 
   it("rejects a bad token and accepts a valid one", async () => {
-    sessionStorage.setItem("sdap_signed_out", "1");
+    localStorage.setItem("sdap_signed_out", "1");
     app("/login");
     const input = await screen.findByTestId("token-input");
     fireEvent.change(input, { target: { value: "garbage" } });
-    fireEvent.click(screen.getByTestId("sign-in-button"));
+    fireEvent.click(screen.getByTestId("token-sign-in-button"));
     expect(await screen.findByRole("alert")).toBeTruthy();
 
     fireEvent.change(input, { target: { value: `Bearer ${jwt({ sub: "u1", exp: future() })}` } });
-    fireEvent.click(screen.getByTestId("sign-in-button"));
+    fireEvent.click(screen.getByTestId("token-sign-in-button"));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/"));
   });
 
   it("rejects an expired token", async () => {
-    sessionStorage.setItem("sdap_signed_out", "1");
+    localStorage.setItem("sdap_signed_out", "1");
     app("/login");
     fireEvent.change(await screen.findByTestId("token-input"), {
       target: { value: jwt({ sub: "u1", exp: 1 }) },
     });
-    fireEvent.click(screen.getByTestId("sign-in-button"));
+    fireEvent.click(screen.getByTestId("token-sign-in-button"));
     expect((await screen.findByRole("alert")).textContent).toMatch(/expired/i);
   });
 
@@ -126,7 +126,7 @@ describe("auth flow (mock API)", () => {
 describe("theme switch and API auth header", () => {
   afterEach(() => {
     cleanup();
-    sessionStorage.clear();
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 

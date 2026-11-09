@@ -26,7 +26,11 @@ import { UNAUTHORIZED_EVENT, getToken } from "../auth/session.js";
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL as string) || "/api/v1";
 
-async function request<T>(path: string, options?: RequestInit, schema?: z.ZodType<T>): Promise<T> {
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+  schema?: z.ZodType<T>,
+): Promise<T> {
   const url = `${API_BASE}${path}`;
   const headers = new Headers(options?.headers);
   if (!headers.has("Accept")) {
@@ -56,6 +60,7 @@ async function request<T>(path: string, options?: RequestInit, schema?: z.ZodTyp
     throw new Error(errMessage);
   }
 
+  if (res.status === 204) return undefined as T;
   const json = await res.json();
   if (schema) {
     return schema.parse(json);

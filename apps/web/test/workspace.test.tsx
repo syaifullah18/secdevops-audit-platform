@@ -7,7 +7,7 @@ import { Layout } from "../src/components/Layout.js";
 
 describe("workspace switcher", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     mockStore.reset();
     return installFetchShim(mockStore);
   });
@@ -40,7 +40,7 @@ import { ProjectsScreen } from "../src/screens/Projects.js";
 
 describe("projects page", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     mockStore.reset();
     return installFetchShim(mockStore);
   });

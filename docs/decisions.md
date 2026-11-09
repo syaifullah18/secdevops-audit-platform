@@ -135,3 +135,15 @@ The API accepts only OIDC bearer JWTs, but the SPA sent none and had no sign-in 
 - Profile is read-only: identity and roles belong to the identity provider.
 
 Consequences: `sessionStorage` is readable by any script on the page, so an XSS would expose the token. Mitigated by the strict CSP and no third-party scripts; the proper fix is an OIDC authorization-code flow with PKCE (see follow-ups).
+
+## D-019 Native accounts for public hosting (supersedes the sign-in part of D-018)
+
+D-018 assumed an external identity provider. Running the platform on a public domain needs accounts that do not depend on one, so the API can now manage them. It is opt-in (`AUTH_NATIVE=true`) and sits beside OIDC: a token that starts with `sdap_` goes to the account store, anything else to the OIDC or dev verifier.
+
+- **Accounts:** email + password (scrypt, 10+ characters), email verification and password reset by single-use links, sign-out everywhere on reset or password change, lockout after five failures and a per-address rate limit. Responses for sign-up, reset and login do not reveal whether an address exists.
+- **Sessions and tokens:** opaque secrets (`sdap_s_…` sessions, `sdap_pat_…` API tokens), stored only as SHA-256, revocable, with a sliding expiry for sessions. An API token can only narrow its owner's roles. The browser keeps the session in `localStorage` so it survives tabs; the web server sends a strict CSP to reduce the XSS risk this carries.
+- **Google and GitHub:** authorization code flow with PKCE. State is a signed, 10-minute JWT bound to an HttpOnly cookie, so a callback from another browser fails. The browser receives a one-time code, never the session, and exchanges it. Identities are keyed by the provider's account id; an existing account is matched only on an address the provider verified.
+- **Access:** the first account (or `BOOTSTRAP_ADMIN_EMAIL`) becomes admin with every client. Later sign-ups get `SIGNUP_DEFAULT_ROLE` and no clients, so a stranger sees no data until an admin grants some. Admins manage roles, client scope and team, invite people, and read an account audit log. The last admin cannot be demoted, disabled or deleted.
+- **Not done:** SAML, MFA/TOTP, per-project membership (access is by client id), session cookies instead of bearer tokens, and OpenAPI entries for the new routes (see follow-ups).
+
+Consequences: the API now stores credentials, so it needs HTTPS, a strong `AUTH_SECRET`, SMTP for verification, and backups of the account tables. Hosts that prefer an identity provider keep using OIDC unchanged.

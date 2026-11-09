@@ -24,6 +24,7 @@ import {
   FIXTURE_EVENTS,
 } from "./fixtures.js";
 import type { CoverageSummary, OrgOverviewMetrics } from "./types.js";
+import { handleMockAccounts, resetMockAccounts } from "./mock-accounts.js";
 
 /**
  * Optional local dataset built by `scripts/import-audit-data.mjs` from real audit runs.
@@ -58,6 +59,7 @@ export class MockDataStore {
   }
 
   reset() {
+    resetMockAccounts();
     this.projects = JSON.parse(JSON.stringify(FIXTURE_PROJECTS));
     this.policies = JSON.parse(JSON.stringify(FIXTURE_POLICIES));
     this.exceptions = JSON.parse(JSON.stringify(FIXTURE_EXCEPTIONS));
@@ -570,6 +572,9 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
     const pathname = url.pathname.replace("/api/v1", "");
 
     try {
+      const accountResponse = handleMockAccounts(pathname, method, init);
+      if (accountResponse) return accountResponse;
+
       // GET /projects
       if (pathname === "/projects" && method === "GET") {
         return new Response(JSON.stringify(store.getProjects()), {

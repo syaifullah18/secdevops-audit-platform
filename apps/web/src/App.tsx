@@ -14,6 +14,14 @@ import { StyleguideScreen } from "./screens/Styleguide.js";
 import { RequireSession } from "./auth/RequireSession.js";
 import { LoginScreen } from "./screens/Login.js";
 import { ProfileScreen } from "./screens/Profile.js";
+import { AdminScreen } from "./screens/Admin.js";
+import { SignupScreen } from "./screens/auth/Signup.js";
+import {
+  ForgotScreen,
+  LoginCallbackScreen,
+  ResetScreen,
+  VerifyScreen,
+} from "./screens/auth/Recovery.js";
 
 export function App() {
   return (
@@ -21,6 +29,11 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginScreen />} />
+          <Route path="/login/callback" element={<LoginCallbackScreen />} />
+          <Route path="/signup" element={<SignupScreen />} />
+          <Route path="/forgot" element={<ForgotScreen />} />
+          <Route path="/reset/:token" element={<ResetScreen />} />
+          <Route path="/verify/:token" element={<VerifyScreen />} />
           <Route
             path="/"
             element={
@@ -39,7 +52,9 @@ export function App() {
             <Route path="policy" element={<PolicyViewScreen />} />
             <Route path="release-readiness" element={<ReleaseReadinessScreen />} />
             <Route path="export" element={<AuditExportScreen />} />
-            <Route path="profile" element={<ProfileScreen />} />
+            <Route path="account" element={<ProfileScreen />} />
+            <Route path="profile" element={<Navigate to="/account" replace />} />
+            <Route path="admin" element={<AdminScreen />} />
             <Route path="styleguide" element={<StyleguideScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

@@ -42,6 +42,37 @@ docker compose up --build
 > A full `docker compose up` to a healthy stack is verified in Phase 2, once the worker has a process
 > entrypoint (see below).
 
+## Public hosting with accounts
+
+The API can run its own accounts, so you can host the dashboard on your domain without an identity
+provider: sign-up, email and password, optional Google and GitHub sign-in, sessions, API tokens,
+invitations and an audit log. It is off until you set `AUTH_NATIVE=true`.
+
+1. **Domain and TLS.** Put the stack behind a reverse proxy that terminates HTTPS (Caddy, Traefik or
+   nginx) and forwards to the `web` container. Everything uses one origin: the web image proxies
+   `/api` to the API. Set `WEB_BASE_URL` and `API_PUBLIC_URL` to `https://your.domain` and
+   `TRUST_PROXY=true` so rate limits see the real client address. Add `Strict-Transport-Security`
+   at the proxy.
+2. **Secrets.** `AUTH_SECRET=$(openssl rand -hex 32)`, plus the Postgres and Grafana passwords from
+   the quick start. Use `docker-compose.hardened.yml`; with native accounts you do not need OIDC.
+3. **Who can sign up.** `SIGNUP_MODE=invite` (default: admins invite people), `open` (anyone, as a
+   `viewer` with no client access until an admin grants some) or `closed`. The first account created
+   becomes the administrator. To stop a stranger from claiming it before you do, set
+   `BOOTSTRAP_ADMIN_EMAIL=you@your.domain`: only that address can become the first admin.
+4. **Mail.** Set `SMTP_URL` and `MAIL_FROM` to send verification, password-reset and invitation
+   mail; with it, email verification is on by default. Without SMTP the links are written to the API
+   log, verification is off, and an admin copies invitation links by hand.
+5. **Google or GitHub (optional).** Create an OAuth app and set the redirect URI to
+   `https://your.domain/api/v1/auth/oauth/google/callback` (or `.../github/callback`), then set
+   `GOOGLE_CLIENT_ID/SECRET` or `GITHUB_CLIENT_ID/SECRET`. With `PASSWORD_LOGIN=false` only
+   providers remain.
+6. **Database.** The migration `apps/api/drizzle/0001_native_accounts.sql` runs automatically on a
+   fresh database. On an existing one, apply it once: `psql "$DATABASE_URL" -f apps/api/drizzle/0001_native_accounts.sql`.
+
+Data: passwords are stored as scrypt hashes, session and API-token secrets only as SHA-256. Login is
+rate limited per address and locks an account for 15 minutes after five failures. A user can delete
+their account and download their data from the Account page.
+
 ## Metrics contract
 
 Both `apps/api/src/metrics.ts` and `apps/worker/src/metrics.ts` export `createMetrics(registry?)`

@@ -121,24 +121,12 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 
 ## Sign-in & Session
 
-- `/login`: paste an OIDC access token for a real API (`VITE_API_BASE_URL` set). With the mock API, "Continue in demo mode" is also offered and the demo user is signed in automatically until you sign out.
-- The token lives in `sessionStorage` for the tab only and is sent as a bearer token. A 401 or token expiry signs you out. Claims are decoded for display only; the API enforces roles and client scope.
-- `/profile`: identity, roles, team, client scope, session expiry and preferences (theme). Identity is read-only.
-- The theme control is a labelled switch (`role="switch"`) in the sidebar, login and profile.
-- Caveat: `sessionStorage` is readable by page scripts; see D-018 and the PKCE follow-up.
-
-## Scripts & Verification
-
-| Command          | Description                                                             |
-| ---------------- | ----------------------------------------------------------------------- |
-| `pnpm dev`       | Start Vite dev server on `:5173`                                        |
-| `pnpm dev:mock`  | Start Vite dev server on `:5173` with mock API enabled                  |
-| `pnpm build`     | Bundle production assets with Vite into `dist/`                         |
-| `pnpm preview`   | Serve production build locally on `:4173`                               |
-| `pnpm typecheck` | Run TypeScript compiler strict checks (`tsc -p tsconfig.json --noEmit`) |
-| `pnpm lint`      | Run ESLint checks against React and browser globals                     |
-| `pnpm test`      | Run Vitest unit and component tests with JSDOM environment              |
-| `pnpm e2e`       | Run Playwright smoke tests against `vite preview` with mock API         |
+- `/login`: email and password, Google or GitHub (when the API enables them), or a pasted OIDC token for instances behind an identity provider. The API reports what is on at `GET /api/v1/auth/config`. With the mock API, "Continue in demo mode" or the demo account (`demo.user@example.test` / `demo-password-123`) also works.
+- `/signup` (invitation links look like `/signup?invite=…`), `/forgot`, `/reset/:token`, `/verify/:token` and `/login/callback` finish the account flows. Whether sign-up is open, by invitation or closed is set on the server (`SIGNUP_MODE`).
+- `/account`: profile, change or set a password, linked Google/GitHub accounts, active sessions (sign out others), API tokens for scripts and CI (secret shown once, limited to your roles), data export and account deletion. Sessions end on a 401 or at expiry.
+- `/admin` (admin role only): users (roles, clients, team, disable, delete), invitations, and the audit log.
+- The session token is kept in `localStorage` and sent as a bearer token. Claims in pasted OIDC tokens are decoded for display only; the API enforces roles and client scope. See D-019 and `deploy/README.md` ("Public hosting").
+- Theme: a labelled switch (`role="switch"`) in the sidebar and on the auth screens.
 
 ## Local dataset from real audit runs
 

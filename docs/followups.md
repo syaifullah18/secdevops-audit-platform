@@ -28,3 +28,7 @@ Items found during lead review and testing. Owner in brackets.
 - [web] "Confirm and create Jira issue" and outbound Slack or PagerDuty alerts from the Stitch designs need a notifications feature that v0.1 does not have.
 - [web] Run stepper wraps with a dangling connector below about 1000 px; hide the last connector per row.
 - [web] Replace token-paste sign-in with OIDC authorization-code + PKCE (redirect, refresh, logout) so tokens are not handled by users or kept in `sessionStorage`.
+- [api] Add OpenAPI entries for `/auth/*`, `/account/*` and `/admin/*` (the routes are implemented and tested, not yet in `openapi.json`).
+- [api] Optional MFA (TOTP) and WebAuthn for native accounts; per-project membership instead of client-id scope.
+- [api] Move the sign-in rate limiter and lockout counters to Redis so they hold across several API replicas.
+- [web] Replace bearer tokens in `localStorage` with an HttpOnly, SameSite session cookie plus a CSRF header.

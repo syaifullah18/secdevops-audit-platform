@@ -11,5 +11,10 @@ test-results/
 .turbo/
 /runs/
 /artifacts/
-.claude/settings.local.json
 apps/web/src/api/audit-data.generated.json
+
+# AI agent tooling (local, per developer)
+.agents/
+.claude/
+.mcp.json
+graphify-out/

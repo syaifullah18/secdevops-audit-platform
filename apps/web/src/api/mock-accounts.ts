@@ -123,7 +123,7 @@ export function handleMockAccounts(
       passwordLogin: true,
       signupMode: "open",
       requireEmailVerification: false,
-      providers: [],
+      providers: ["google", "github"],
     });
   }
   if (pathname === "/auth/signup" && method === "POST") {
@@ -163,8 +163,12 @@ export function handleMockAccounts(
   if (pathname === "/auth/invitations/preview" && method === "POST") {
     return respond(200, { email: "invited@example.test" });
   }
-  if (pathname === "/auth/oauth/exchange" && method === "POST")
+  if (pathname === "/auth/oauth/exchange" && method === "POST") {
+    // Mock providers hand back this fixed code and sign in as the demo account.
+    if ((body() as { code?: string }).code === "mock-provider-code")
+      return respond(200, open(users[0]!));
     return fail(400, "This sign-in link has expired. Try again.");
+  }
 
   // ----- authenticated: tokenless calls are the demo user (mock mode signs it in without a token)
   const tok = bearer(init);

@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { authApi, providerStartUrl, type AuthConfig } from "../../api/auth.js";
+import { authApi, type AuthConfig } from "../../api/auth.js";
 import { AuthShell } from "../../components/AuthShell.js";
 import { Field, FormError, Notice, errMsg } from "../../components/Field.js";
+import { OrDivider, ProviderButtons } from "../../components/ProviderButtons.js";
 import { btn } from "../../components/stitch.js";
 import { useApp } from "../../context/AppContext.js";
 
@@ -84,68 +85,63 @@ export function SignupScreen() {
             : "Sign-up is closed on this instance."}
         </Notice>
       ) : (
-        <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Create an account">
-          <Field
-            id="name"
-            label="Name"
-            autoComplete="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            data-testid="name-input"
-          />
-          <Field
-            id="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            required
-            readOnly={Boolean(invite)}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            data-testid="email-input"
-          />
-          <Field
-            id="password"
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            minLength={10}
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            hint="At least 10 characters."
-            data-testid="password-input"
-          />
-          <Field
-            id="confirm"
-            label="Confirm password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            data-testid="confirm-input"
-          />
-          <FormError message={error} />
-          <button
-            type="submit"
-            className={btn.primary}
-            disabled={busy}
-            data-testid="sign-up-button"
-          >
-            {busy ? "Creating…" : "Create account"}
-          </button>
-          {cfg && cfg.providers.length > 0 && !invite && (
-            <div className="flex flex-col gap-2">
-              {cfg.providers.map((p) => (
-                <a key={p} href={providerStartUrl(p)} className={btn.secondary}>
-                  Sign up with {p === "github" ? "GitHub" : "Google"}
-                </a>
-              ))}
-            </div>
-          )}
-        </form>
+        <div className="flex flex-col gap-4">
+          {cfg && !invite && <ProviderButtons providers={cfg.providers} verb="Sign up" />}
+          {cfg && !invite && cfg.providers.length > 0 && <OrDivider />}
+          <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Create an account">
+            <Field
+              id="name"
+              label="Name"
+              autoComplete="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              data-testid="name-input"
+            />
+            <Field
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              required
+              readOnly={Boolean(invite)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              data-testid="email-input"
+            />
+            <Field
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              hint="At least 10 characters."
+              data-testid="password-input"
+            />
+            <Field
+              id="confirm"
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              data-testid="confirm-input"
+            />
+            <FormError message={error} />
+            <button
+              type="submit"
+              className={btn.primary}
+              disabled={busy}
+              data-testid="sign-up-button"
+            >
+              {busy ? "Creating…" : "Create account"}
+            </button>
+          </form>
+        </div>
       )}
       {!sent && closed && <FormError message={error} />}
     </AuthShell>

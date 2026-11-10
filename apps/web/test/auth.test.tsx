@@ -20,7 +20,6 @@ import { api } from "../src/api/client.js";
 
 const b64 = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, "");
 const jwt = (claims: object) => `${b64({ alg: "none" })}.${b64(claims)}.sig`;
-const future = () => Math.floor(Date.now() / 1000) + 3600;
 
 const Where = () => <div data-testid="where">{useLocation().pathname}</div>;
 
@@ -84,34 +83,24 @@ describe("auth flow (mock API)", () => {
     expect(screen.getByTestId("login-screen")).toBeTruthy();
   });
 
-  it("rejects a bad token and accepts a valid one", async () => {
-    localStorage.setItem("sdap_signed_out", "1");
-    app("/login");
-    const input = await screen.findByTestId("token-input");
-    fireEvent.change(input, { target: { value: "garbage" } });
-    fireEvent.click(screen.getByTestId("token-sign-in-button"));
-    expect(await screen.findByRole("alert")).toBeTruthy();
-
-    fireEvent.change(input, { target: { value: `Bearer ${jwt({ sub: "u1", exp: future() })}` } });
-    fireEvent.click(screen.getByTestId("token-sign-in-button"));
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/"));
-  });
-
-  it("rejects an expired token", async () => {
-    localStorage.setItem("sdap_signed_out", "1");
-    app("/login");
-    fireEvent.change(await screen.findByTestId("token-input"), {
-      target: { value: jwt({ sub: "u1", exp: 1 }) },
-    });
-    fireEvent.click(screen.getByTestId("token-sign-in-button"));
-    expect((await screen.findByRole("alert")).textContent).toMatch(/expired/i);
-  });
-
   it("a 401 event signs the user out", async () => {
     app("/");
     await screen.findByTestId("user-menu-button");
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/login"));
+  });
+
+  it("notifications bell opens a panel with review items and can mark them read", async () => {
+    app("/");
+    const bell = await screen.findByTestId("notifications-button");
+    await waitFor(() => expect(screen.getByTestId("notifications-badge")).toBeTruthy());
+    fireEvent.click(bell);
+    const panel = await screen.findByTestId("notifications-panel");
+    await waitFor(() => expect(panel.querySelectorAll("a").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByTestId("notifications-mark-read"));
+    await waitFor(() => expect(screen.queryByTestId("notifications-badge")).toBeNull());
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("notifications-panel")).toBeNull());
   });
 
   it("user menu closes on Escape", async () => {

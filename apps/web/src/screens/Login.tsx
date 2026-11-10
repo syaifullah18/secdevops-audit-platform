@@ -1,27 +1,24 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { authApi, providerStartUrl, type AuthConfig } from "../api/auth.js";
+import { authApi, type AuthConfig } from "../api/auth.js";
 import { IS_MOCK } from "../api/mode.js";
 import { AuthShell } from "../components/AuthShell.js";
-import { Field, FormError, errMsg, inputCls } from "../components/Field.js";
+import { Field, FormError, errMsg } from "../components/Field.js";
 import { Icon } from "../components/Icon.js";
+import { OrDivider, ProviderButtons } from "../components/ProviderButtons.js";
 import { btn } from "../components/stitch.js";
 import { useApp } from "../context/AppContext.js";
 
-const PROVIDER_LABEL: Record<string, string> = { google: "Google", github: "GitHub" };
-
-/** Sign-in: email and password, a provider, a pasted OIDC token, or demo mode under the mock API. */
+/** Sign-in: Google or GitHub first, then email and password; demo mode under the mock API. */
 export function LoginScreen() {
-  const { user, signIn, signInDemo, startSession } = useApp();
+  const { user, signInDemo, startSession } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setTokenText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [tokenError, setTokenError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -62,13 +59,6 @@ export function LoginScreen() {
     }
   };
 
-  const submitToken = (e: FormEvent) => {
-    e.preventDefault();
-    const err = signIn(token);
-    setTokenError(err);
-    if (!err) navigate(from, { replace: true });
-  };
-
   const showPassword = cfg?.native && cfg.passwordLogin;
   return (
     <AuthShell
@@ -89,6 +79,8 @@ export function LoginScreen() {
         ) : undefined
       }
     >
+      {cfg && <ProviderButtons providers={cfg.providers} verb="Continue" />}
+      {cfg && cfg.providers.length > 0 && showPassword && <OrDivider />}
       {showPassword && (
         <form
           onSubmit={submitPassword}
@@ -135,25 +127,9 @@ export function LoginScreen() {
         </form>
       )}
 
-      {cfg && cfg.providers.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {showPassword && <Divider />}
-          {cfg.providers.map((p) => (
-            <a
-              key={p}
-              href={providerStartUrl(p)}
-              className={btn.secondary}
-              data-testid={`provider-${p}`}
-            >
-              Continue with {PROVIDER_LABEL[p] ?? p}
-            </a>
-          ))}
-        </div>
-      )}
-
       {IS_MOCK && (
         <div className="flex flex-col gap-2">
-          {(showPassword || (cfg?.providers.length ?? 0) > 0) && <Divider />}
+          {(showPassword || (cfg?.providers.length ?? 0) > 0) && <OrDivider label="or" />}
           <button
             type="button"
             className={btn.secondary}
@@ -172,50 +148,12 @@ export function LoginScreen() {
         </div>
       )}
 
-      <details className="group" open={cfg !== null && !cfg.native}>
-        <summary className="text-xs text-on-surface-variant cursor-pointer select-none">
-          Use an OIDC access token
-        </summary>
-        <form onSubmit={submitToken} className="flex flex-col gap-2 mt-3">
-          <label htmlFor="access-token" className="text-xs font-medium text-on-surface-variant">
-            Access token
-          </label>
-          <input
-            id="access-token"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            className={`${inputCls} font-mono`}
-            placeholder="eyJhbGciOi..."
-            value={token}
-            onChange={(e) => setTokenText(e.target.value)}
-            data-testid="token-input"
-          />
-          <p className="text-[11px] text-on-surface-variant">
-            For instances that sign in through your own identity provider. The token is kept in this
-            browser and sent as a bearer token; the server verifies it on every request.
-          </p>
-          <FormError message={tokenError} />
-          <button
-            type="submit"
-            className={btn.secondary}
-            disabled={token.trim() === ""}
-            data-testid="token-sign-in-button"
-          >
-            Sign in with token
-          </button>
-        </form>
-      </details>
+      {cfg && !showPassword && cfg.providers.length === 0 && !IS_MOCK && (
+        <p className="text-sm text-on-surface-variant" data-testid="no-sign-in">
+          No sign-in method is enabled on this instance. An administrator can turn on accounts with
+          AUTH_NATIVE=true.
+        </p>
+      )}
     </AuthShell>
-  );
-}
-
-function Divider() {
-  return (
-    <div className="flex items-center gap-3 text-[11px] text-on-surface-variant">
-      <span className="h-px flex-1 bg-outline-variant/50" />
-      or
-      <span className="h-px flex-1 bg-outline-variant/50" />
-    </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Role } from "@sdap/core";
+import { IS_MOCK } from "./mode.js";
 import { request } from "./client.js";
 import type { AccountView } from "../auth/session.js";
 
@@ -73,7 +74,9 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 /** Where the browser is sent to start a provider sign-in (a plain GET, so the API can redirect). */
 export const providerStartUrl = (provider: string): string =>
-  `${(import.meta.env?.VITE_API_BASE_URL as string) || "/api/v1"}/auth/oauth/${provider}/start`;
+  IS_MOCK
+    ? "/login/callback?code=mock-provider-code"
+    : `${(import.meta.env?.VITE_API_BASE_URL as string) || "/api/v1"}/auth/oauth/${provider}/start`;
 
 export const authApi = {
   config: () => request<AuthConfig>("/auth/config", json("GET")),

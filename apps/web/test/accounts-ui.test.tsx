@@ -59,6 +59,17 @@ describe("accounts UI (mock API)", () => {
   });
   afterEach(cleanup);
 
+  it("offers Google and GitHub before email, with no OIDC token form", async () => {
+    app("/login");
+    const google = await screen.findByTestId("provider-google");
+    const github = screen.getByTestId("provider-github");
+    const email = screen.getByTestId("email-input");
+    expect(google.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(github.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId("token-input")).toBeNull();
+    expect(screen.queryByText(/OIDC/i)).toBeNull();
+  });
+
   it("signs in with email and password and shows a clear error for a wrong one", async () => {
     app("/login");
     await screen.findByTestId("email-input");

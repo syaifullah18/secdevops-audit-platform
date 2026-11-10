@@ -4,6 +4,7 @@ import { api } from "../api/client.js";
 import { useApp } from "../context/AppContext.js";
 import { CommandPaletteModal } from "./CommandPaletteModal.js";
 import { Icon } from "./Icon.js";
+import { NotificationsMenu } from "./NotificationsMenu.js";
 import { ThemeToggle } from "./ui/ThemeToggle.js";
 import { UserMenu } from "./UserMenu.js";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher.js";
@@ -52,6 +53,25 @@ export function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [queueCount, setQueueCount] = useState<number | null>(null);
   const [projects, setProjects] = useState<Project[] | null>(null);
+
+  // The sidebar is visible everywhere by default; the top-bar button hides it and the choice is
+  // remembered across pages and reloads.
+  const [hidden, setHidden] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sdap_sidebar_hidden") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSidebar = () => {
+    const next = !hidden;
+    setHidden(next);
+    try {
+      localStorage.setItem("sdap_sidebar_hidden", next ? "1" : "0");
+    } catch {
+      // storage unavailable: the toggle still works for this session
+    }
+  };
 
   // The badge is informational; a failed fetch just hides it.
   useEffect(() => {
@@ -136,7 +156,10 @@ export function Layout() {
       {/* Fixed docked sidebar */}
       <aside
         aria-label="Main Navigation"
-        className="print:hidden fixed top-0 left-0 h-screen w-64 z-40 flex flex-col justify-between p-4 bg-surface-container-lowest border-r border-outline-variant"
+        id="main-sidebar"
+        aria-hidden={hidden}
+        inert={hidden}
+        className={`print:hidden fixed top-0 left-0 h-screen w-64 z-40 flex flex-col justify-between p-4 bg-surface-container-lowest border-r border-outline-variant transition-transform duration-200 ${hidden ? "-translate-x-full" : "translate-x-0"}`}
       >
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-3 px-1 pt-1">
@@ -218,9 +241,22 @@ export function Layout() {
       </aside>
 
       {/* Canvas, offset by the sidebar */}
-      <div className="flex-1 ml-64 print:ml-0 flex flex-col min-h-screen min-w-0">
+      <div
+        className={`flex-1 ${hidden ? "ml-0" : "ml-64"} print:ml-0 transition-[margin] duration-200 flex flex-col min-h-screen min-w-0`}
+      >
         <header className="print:hidden sticky top-0 z-30 w-full px-6 py-2.5 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/50 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              data-testid="sidebar-toggle"
+              aria-label={hidden ? "Show sidebar" : "Hide sidebar"}
+              aria-controls="main-sidebar"
+              aria-expanded={!hidden}
+              className="h-8 w-8 shrink-0 rounded-lg border border-outline-variant/60 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
+              <Icon name={hidden ? "menu" : "menu_open"} className="text-[18px]" />
+            </button>
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
@@ -250,14 +286,7 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              aria-label="Notifications (1 unread)"
-              className="relative h-8 w-8 rounded-lg border border-outline-variant/60 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
-            >
-              <Icon name="notifications" className="text-[18px]" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error" />
-            </button>
+            <NotificationsMenu />
 
             <UserMenu />
           </div>

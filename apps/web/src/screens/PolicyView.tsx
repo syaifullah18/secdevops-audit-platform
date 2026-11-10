@@ -25,12 +25,6 @@ import { countdown } from "./ReleaseReadiness.js";
 
 const SEVERITIES: readonly Severity[] = ["critical", "high", "medium", "low", "informational"];
 
-const INTEGRATIONS = [
-  { name: "Slack", icon: "forum", note: "Run and gate notifications" },
-  { name: "PagerDuty", icon: "notifications_active", note: "Page on SLA breach" },
-  { name: "Jira", icon: "confirmation_number", note: "Create issue from a confirmed finding" },
-] as const;
-
 export function PolicyViewScreen() {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [exceptions, setExceptions] = useState<Exception[]>([]);
@@ -241,25 +235,9 @@ export function PolicyViewScreen() {
 
       <Panel
         testId="integrations-card"
-        title="Webhook & Alert Integrations"
-        subtitle="Inbound CI webhooks are signed per project. Outbound notifications are not part of v0.1."
+        title="Inbound CI Webhook Secrets"
+        subtitle="Inbound CI webhooks are authenticated and signed per project using constant-time HMAC verification."
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {INTEGRATIONS.map((i) => (
-            <div
-              key={i.name}
-              className="rounded-md border border-outline-variant/50 bg-surface-container-low px-4 py-3 flex items-center gap-3"
-            >
-              <Icon name={i.icon} className="text-xl text-on-surface-variant" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">{i.name}</div>
-                <div className="text-[11px] text-on-surface-variant">{i.note}</div>
-              </div>
-              <Pill>Not connected</Pill>
-            </div>
-          ))}
-        </div>
-        <h4 className="text-xs font-semibold text-on-surface mt-5 mb-2">Inbound webhook secrets</h4>
         <ul className="flex flex-col gap-1.5">
           {projects.map((p) => (
             <li key={p.id} className="flex items-center justify-between text-xs">

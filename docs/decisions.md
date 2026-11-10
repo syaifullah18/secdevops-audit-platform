@@ -121,7 +121,7 @@ Several Stitch panels were static mock content. Where the platform has no backin
 
 - Sandbox terminal is a labelled simulation built from the finding's trace. "Mark Verified Exploit" is omitted: only System 2 verification confirms a finding.
 - Framework cards (SOC 2, ISO 27001, PCI-DSS) show indicative signals computed from the scope (SLA adherence, audit coverage, serious findings fixed), labelled as not a compliance determination.
-- Slack, PagerDuty and Jira appear as "Not connected"; outbound notifications are not in v0.1. Inbound webhook secret status is real (`webhookSecretRef`).
+- Outbound notifications (Slack, PagerDuty, Jira) are omitted entirely from v0.1 (no placeholder UI). Inbound webhook secret status is real (`webhookSecretRef`).
 - Policy mode is shown read-only: policy is code and changes through a reviewed commit.
 - Review-queue Accept and Reject call the real triage API; Reject requires a reason, as the API does.
 

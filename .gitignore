@@ -18,3 +18,4 @@ apps/web/src/api/audit-data.generated.json
 .claude/
 .mcp.json
 graphify-out/
+.asw/

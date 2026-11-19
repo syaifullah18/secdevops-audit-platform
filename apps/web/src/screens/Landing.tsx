@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { authApi, type AuthConfig } from "../api/auth.js";
 import { Icon } from "../components/Icon.js";
 import { btn } from "../components/stitch.js";
 import { ThemeToggle } from "../components/ui/ThemeToggle.js";
@@ -31,7 +33,10 @@ const FEATURES = [
 
 const STEPS = [
   ["Add a repository", "Paste its URL. Name and slug are filled in for you."],
-  ["Run an audit", "Pick the scope. Progress streams live, with tokens and cost per phase."],
+  [
+    "Run an audit",
+    "Pick the scope. Progress streams live, and the tokens and cost of each run are recorded.",
+  ],
   ["Triage and gate", "Review what needs validation, grant waivers, and check release readiness."],
 ] as const;
 
@@ -78,15 +83,28 @@ const Section = ({
   </section>
 );
 
-/** Example rows only: they show the shape of a finding list, not real results. */
-const PREVIEW = [
-  ["Critical", "Missing ownership check on GET /orders/:id", "Confirmed"],
-  ["High", "Webhook signature compared without a constant-time check", "Confirmed"],
-  ["Medium", "Session cookie missing the Secure attribute", "Needs validation"],
-] as const;
+const PROVIDER_LABEL = { google: "Google", github: "GitHub" } as const;
 
 export function LandingScreen() {
   const { user } = useApp();
+  // What this instance really offers: sign-up may be closed, and providers are opt-in.
+  const [cfg, setCfg] = useState<AuthConfig | null>(null);
+  useEffect(() => {
+    let live = true;
+    authApi
+      .config()
+      .then((c) => live && setCfg(c))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const canSignUp = cfg?.native === true && cfg.signupMode === "open";
+  const providers = (cfg?.providers ?? []).map((p) => PROVIDER_LABEL[p]);
+  const trust = [
+    ...(providers.length ? [`Sign in with ${providers.join(" or ")}`] : []),
+    "Your data stays in your database",
+  ].join(" · ");
   return (
     <div className="sdap-shell min-h-screen" data-testid="landing-screen">
       <header className="sticky top-0 z-10 border-b border-outline-variant/40 bg-surface/90 backdrop-blur">
@@ -116,9 +134,11 @@ export function LandingScreen() {
                 <Link to="/login" className={btn.secondary} data-testid="landing-login">
                   Log in
                 </Link>
-                <Link to="/signup" className={btn.primary} data-testid="landing-signup">
-                  Create account
-                </Link>
+                {canSignUp && (
+                  <Link to="/signup" className={btn.primary} data-testid="landing-signup">
+                    Create account
+                  </Link>
+                )}
               </>
             )}
           </div>
@@ -139,40 +159,17 @@ export function LandingScreen() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
-              to={user ? "/" : "/signup"}
+              to={user ? "/" : canSignUp ? "/signup" : "/login"}
               className={`${btn.primary} !px-5 !py-2.5 !text-sm`}
               data-testid="landing-cta"
             >
-              {user ? "Open dashboard" : "Create a free account"}
+              {user ? "Open dashboard" : canSignUp ? "Create an account" : "Log in"}
             </Link>
             <a href="#how" className={`${btn.secondary} !px-5 !py-2.5 !text-sm`}>
               See how it works
             </a>
           </div>
-          <p className="mt-4 text-xs text-on-surface-variant">
-            No credit card · Sign in with Google or GitHub · Your data stays in your database
-          </p>
-
-          <div
-            className="mx-auto mt-12 max-w-3xl rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-4 text-left shadow-sm"
-            aria-label="Example finding list"
-          >
-            <div className="mb-3 flex items-center justify-between text-xs text-on-surface-variant">
-              <span className="font-semibold">Findings</span>
-              <span>Example data</span>
-            </div>
-            <ul className="divide-y divide-outline-variant/40">
-              {PREVIEW.map(([sev, title, verdict]) => (
-                <li key={title} className="flex items-center gap-3 py-2.5 text-sm">
-                  <span className="w-16 shrink-0 text-xs font-semibold">{sev}</span>
-                  <span className="flex-1">{title}</span>
-                  <span className="shrink-0 rounded-full border border-outline-variant/60 px-2 py-0.5 text-xs">
-                    {verdict}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <p className="mt-4 text-xs text-on-surface-variant">{trust}</p>
         </div>
 
         <Section
@@ -245,10 +242,13 @@ docker compose up --build -d`}
             Audit your first repository today
           </h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to={user ? "/" : "/signup"} className={`${btn.primary} !px-5 !py-2.5 !text-sm`}>
-              {user ? "Open dashboard" : "Create a free account"}
+            <Link
+              to={user ? "/" : canSignUp ? "/signup" : "/login"}
+              className={`${btn.primary} !px-5 !py-2.5 !text-sm`}
+            >
+              {user ? "Open dashboard" : canSignUp ? "Create an account" : "Log in"}
             </Link>
-            {!user && (
+            {!user && canSignUp && (
               <Link to="/login" className={`${btn.secondary} !px-5 !py-2.5 !text-sm`}>
                 Log in
               </Link>

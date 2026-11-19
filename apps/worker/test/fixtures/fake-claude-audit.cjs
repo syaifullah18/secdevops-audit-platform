@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 // A stand-in for `claude -p` that behaves like a finished audit: it reads the phase from the
 // prompt and leaves the artefacts that phase must produce, then reports usage as JSON.
 const fs = require("node:fs");

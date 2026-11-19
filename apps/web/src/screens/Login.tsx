@@ -21,27 +21,35 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [unreachable, setUnreachable] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
     let live = true;
+    setUnreachable(false);
     authApi
       .config()
       .then((c) => live && setCfg(c))
-      // An API without native accounts has no /auth/config: only OIDC tokens work there.
-      .catch(
-        () =>
-          live &&
+      .catch((e: unknown) => {
+        if (!live) return;
+        // A 404 means an API without native accounts. Anything else (502, offline) means the
+        // server could not be reached, which must not be reported as "no sign-in method".
+        if (/HTTP 404/.test(e instanceof Error ? e.message : "")) {
           setCfg({
             native: false,
             passwordLogin: false,
             signupMode: "closed",
             requireEmailVerification: false,
             providers: [],
-          }),
-      );
+          });
+        } else {
+          setUnreachable(true);
+        }
+      });
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   if (user) return <Navigate to={from} replace />;
 
@@ -148,6 +156,17 @@ export function LoginScreen() {
         </div>
       )}
 
+      {unreachable && (
+        <div className="flex flex-col gap-3" data-testid="server-unreachable">
+          <p className="text-sm text-on-surface-variant">
+            The server is not responding. This is usually temporary (a restart or a deploy in
+            progress). Try again in a moment.
+          </p>
+          <button type="button" className={btn.secondary} onClick={() => setAttempt((n) => n + 1)}>
+            Try again
+          </button>
+        </div>
+      )}
       {cfg && !showPassword && cfg.providers.length === 0 && !IS_MOCK && (
         <p className="text-sm text-on-surface-variant" data-testid="no-sign-in">
           No sign-in method is enabled on this instance. An administrator can turn on accounts with

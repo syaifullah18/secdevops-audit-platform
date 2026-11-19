@@ -70,6 +70,19 @@ describe("accounts UI (mock API)", () => {
     expect(screen.queryByText(/OIDC/i)).toBeNull();
   });
 
+  it("says the server is unreachable, not that sign-in is disabled, when the API is down", async () => {
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response("<html>502</html>", { status: 502, statusText: "Bad Gateway" })) as typeof fetch;
+    try {
+      app("/login");
+      expect(await screen.findByTestId("server-unreachable")).toBeTruthy();
+      expect(screen.queryByTestId("no-sign-in")).toBeNull();
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
   it("signs in with email and password and shows a clear error for a wrong one", async () => {
     app("/login");
     await screen.findByTestId("email-input");

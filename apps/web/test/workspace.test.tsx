@@ -66,4 +66,32 @@ describe("projects page", () => {
       screen.getByTestId("projects-screen").querySelectorAll("a[href^='/projects/']").length,
     ).toBe(mockStore.projects.length);
   });
+
+  it("an admin can add a project from a repository URL", async () => {
+    render(
+      <AppProvider>
+        <MemoryRouter initialEntries={["/projects"]}>
+          <Routes>
+            <Route path="projects" element={<ProjectsScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProvider>,
+    );
+    const before = mockStore.projects.length;
+    fireEvent.click(await screen.findByTestId("add-project-button"));
+    fireEvent.change(screen.getByTestId("repo-url-input"), {
+      target: { value: "https://github.com/acme/billing-api.git" },
+    });
+    // Name and slug are filled in from the repository name.
+    expect((screen.getByTestId("project-name-input") as HTMLInputElement).value).toBe(
+      "billing-api",
+    );
+    expect((screen.getByTestId("project-slug-input") as HTMLInputElement).value).toBe(
+      "billing-api",
+    );
+    fireEvent.click(screen.getByTestId("create-project-button"));
+    await waitFor(() => expect(screen.getByTestId("project-card-billing-api")).toBeTruthy());
+    expect(mockStore.projects.length).toBe(before + 1);
+    expect(screen.queryByTestId("add-project-form")).toBeNull();
+  });
 });

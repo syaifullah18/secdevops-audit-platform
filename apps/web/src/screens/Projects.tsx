@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Finding, Project } from "@sdap/core";
 import { api } from "../api/client.js";
+import { AddProjectForm } from "../components/AddProjectForm.js";
+import { useApp } from "../context/AppContext.js";
 import { Icon } from "../components/Icon.js";
 import { ErrorBanner, Loading, PageHeader, Pill, btn, severityTone } from "../components/stitch.js";
 
@@ -10,6 +12,9 @@ export function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const { user } = useApp();
+  const canAdd = Boolean(user?.roles.some((r) => r === "admin" || r === "devops"));
 
   useEffect(() => {
     let mounted = true;
@@ -33,9 +38,34 @@ export function ProjectsScreen() {
       <PageHeader
         title="Projects"
         subtitle={`${projects.length} ${projects.length === 1 ? "repository" : "repositories"} audited`}
+        actions={
+          canAdd && !adding ? (
+            <button
+              type="button"
+              className={btn.primary}
+              onClick={() => setAdding(true)}
+              data-testid="add-project-button"
+            >
+              <Icon name="add" className="text-[16px]" />
+              Add project
+            </button>
+          ) : undefined
+        }
       />
+      {adding && (
+        <AddProjectForm
+          onCancel={() => setAdding(false)}
+          onCreated={(p) => {
+            setProjects((cur) => [p, ...(cur ?? [])]);
+            setAdding(false);
+          }}
+        />
+      )}
       {projects.length === 0 ? (
-        <p className="text-sm text-on-surface-variant">No repositories yet.</p>
+        <p className="text-sm text-on-surface-variant" data-testid="no-projects">
+          No repositories yet.
+          {canAdd ? " Add one to start auditing." : " Ask an administrator to add one."}
+        </p>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {projects.map((p) => {

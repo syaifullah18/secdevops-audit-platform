@@ -302,6 +302,8 @@ export class AccountService {
       return fail("unknown");
     }
     if (user.lockedUntil && user.lockedUntil > this.now()) {
+      // Spend the same time as a real attempt so a locked account cannot be told apart by speed.
+      await verifyPassword(input.password, await dummyHash());
       throw new HttpLocked();
     }
     const ok = await verifyPassword(input.password, user.passwordHash);

@@ -118,6 +118,8 @@ services:
       REDIS_URL: redis://redis:6379
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
       SDAP_METRICS_PORT: "9464"
+      # `none` runs audits without a container sandbox (needed where no container socket exists).
+      SDAP_SANDBOX_RUNNER: ${SDAP_SANDBOX_RUNNER:-}
       MODEL_DEFAULT_ADAPTER: ${MODEL_DEFAULT_ADAPTER:-mock}
       JEV_API_URL: ${JEV_API_URL:-}
       JEV_API_KEY: ${JEV_API_KEY:-}

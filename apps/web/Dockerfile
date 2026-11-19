@@ -9,6 +9,10 @@ ENV PATH=/pnpm:$PATH
 RUN npm install --global pnpm@12.18.0
 WORKDIR /repo
 COPY . .
+# Without this the bundle falls back to the in-browser mock API (demo data). nginx serves the real
+# API on the same origin under /api/v1.
+ARG VITE_API_BASE_URL=/api/v1
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm install --frozen-lockfile --filter "@sdap/web..." \
  && pnpm --filter "@sdap/web..." build
 

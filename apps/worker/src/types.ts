@@ -1,4 +1,4 @@
-import type { Finding, Run, Usage } from "@sdap/core";
+import type { ModelRoute, Finding, Run, Usage } from "@sdap/core";
 
 export type IsCancelledFn = () => Promise<boolean> | boolean;
 
@@ -16,6 +16,8 @@ export interface PipelineExecutionOptions {
   isCancelled?: IsCancelledFn;
   targetDir?: string;
   outputDir?: string;
+  /** Per-project model routing; empty or missing means the platform defaults. */
+  routes?: ModelRoute[];
 }
 
 export interface PhaseExecutionResult {

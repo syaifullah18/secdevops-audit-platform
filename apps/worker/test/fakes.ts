@@ -162,6 +162,27 @@ export class FakeStore implements Store {
 
   readonly runs: RunRepo = {
     create: async (run: Run) => {
+      // Tests create runs for projects they never register; the importer needs the project row.
+      if (!this.projectsMap.has(run.projectId)) {
+        const now = new Date().toISOString();
+        this.projectsMap.set(run.projectId, {
+          id: run.projectId,
+          slug: `p-${run.projectId.slice(0, 8)}`,
+          name: "Test project",
+          repoUrl: "https://example.test/repo.git",
+          defaultBranch: "main",
+          team: "t",
+          clientId: "c",
+          policyId: null,
+          webhookSecretRef: null,
+          modelRouting: [],
+          escalation: null,
+          criticalPaths: [],
+          monthlyTokenBudget: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
       this.runsMap.set(run.id, run);
       return run;
     },

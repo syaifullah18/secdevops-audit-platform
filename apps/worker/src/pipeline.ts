@@ -172,7 +172,12 @@ export class AuditPipeline {
 
     await this.startPhase(run, "preflight", 1, sequencer);
 
-    const uniqueModelRefs = this.getUniqueModelRefs();
+    // A project's own routing wins; otherwise the platform defaults apply.
+    const routes = options.routes && options.routes.length > 0 ? options.routes : this.routes;
+    const routeFor = (task: string): ModelRoute =>
+      routes.find((r) => r.task === task) ?? this.getRouteForTask(task);
+
+    const uniqueModelRefs = this.getUniqueModelRefs(routes);
     for (const ref of uniqueModelRefs) {
       try {
         const adapter = this.adapterRegistry.resolve(ref);
@@ -226,7 +231,7 @@ export class AuditPipeline {
       this.createSlice(run.id, "recon", "recon/architecture");
 
     if (!isResume || reconSlice.status !== "succeeded") {
-      const reconRoute = this.getRouteForTask("recon");
+      const reconRoute = routeFor("recon");
       const res = await executeSliceWithFallback({
         slice: reconSlice,
         route: reconRoute,
@@ -261,7 +266,7 @@ export class AuditPipeline {
     const huntSlices = this.planHuntSlices(run, existingSlices);
     await this.startPhase(run, "hunt", huntSlices.length, sequencer);
 
-    const huntRoute = this.getRouteForTask("hunt");
+    const huntRoute = routeFor("hunt");
     let lastHunterModel: ModelRef | undefined;
 
     for (const slice of huntSlices) {
@@ -316,8 +321,9 @@ export class AuditPipeline {
       return run;
     }
 
-    await this.startPhase(run, "triage", 1, sequencer);
-    await this.finishPhase(run, "triage", "succeeded", sequencer);
+    // No separate triage step exists in the skill: candidates go straight to validation.
+    await this.startPhase(run, "triage", 0, sequencer);
+    await this.finishPhase(run, "triage", "skipped", sequencer);
 
     // ==========================================
     // 5. Phase: VALIDATE (parallel, cross-family)
@@ -330,7 +336,7 @@ export class AuditPipeline {
     const validateSlices = this.planValidateSlices(run, existingSlices);
     await this.startPhase(run, "validate", validateSlices.length, sequencer);
 
-    const validateRoute = this.getRouteForTask("validate");
+    const validateRoute = routeFor("validate");
 
     for (const slice of validateSlices) {
       if (await isCancelled?.()) {
@@ -477,8 +483,9 @@ export class AuditPipeline {
       return run;
     }
 
-    await this.startPhase(run, "record_verify", 1, sequencer);
-    await this.finishPhase(run, "record_verify", "succeeded", sequencer);
+    // Record checking is done by the findings and coverage-ledger validators in the output phase.
+    await this.startPhase(run, "record_verify", 0, sequencer);
+    await this.finishPhase(run, "record_verify", "skipped", sequencer);
 
     // ==========================================
     // 8. Phase: REPORT
@@ -688,11 +695,11 @@ export class AuditPipeline {
     return [this.createSlice(run.id, "validate", "validate/cross-family-001")];
   }
 
-  private getUniqueModelRefs(): ModelRef[] {
+  private getUniqueModelRefs(routes: ModelRoute[]): ModelRef[] {
     const refs: ModelRef[] = [];
     const seen = new Set<string>();
 
-    for (const route of this.routes) {
+    for (const route of routes) {
       const all = [route.primary, ...route.fallbacks];
       for (const ref of all) {
         const key = `${ref.adapter}:${ref.model}`;

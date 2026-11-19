@@ -76,12 +76,13 @@ export function createAuditWorker(options: AuditWorkerOptions): AuditWorkerInsta
       return latest?.status === "cancelled";
     };
 
+    const project = await options.store.projects.get(run.projectId, { clientIds: "*" });
+    if (!project) throw new Error(`Project not found: ${run.projectId}`);
+
     // Without an explicit target (tests), audit a fresh checkout of the project's repository.
     let targetDir = opts.targetDir;
     let cleanup: (() => Promise<void>) | null = null;
     if (!targetDir) {
-      const project = await options.store.projects.get(run.projectId, { clientIds: "*" });
-      if (!project) throw new Error(`Project not found: ${run.projectId}`);
       const dir = targetDirFor(config.outputBaseDir, run.id);
       try {
         const { commitSha } = await prepareTarget({
@@ -91,6 +92,9 @@ export function createAuditWorker(options: AuditWorkerOptions): AuditWorkerInsta
           dir,
           token: process.env["GIT_AUTH_TOKEN"],
           tokenHost: process.env["GIT_AUTH_HOST"],
+          // Local repositories are for tests and development only, never a production setting.
+          allowLocal:
+            config.nodeEnv !== "production" && process.env["SDAP_ALLOW_LOCAL_REPOS"] === "true",
         });
         run.commitSha = commitSha;
         await options.store.runs.update(run.id, { commitSha });
@@ -125,6 +129,7 @@ export function createAuditWorker(options: AuditWorkerOptions): AuditWorkerInsta
         isCancelled: isCancelledCombined,
         targetDir,
         outputDir: opts.outputDir,
+        routes: project.modelRouting,
       });
     } finally {
       await cleanup?.().catch(() => undefined);

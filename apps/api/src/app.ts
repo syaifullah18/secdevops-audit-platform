@@ -11,6 +11,7 @@ import { type ConfigOverrides, loadConfig } from "./config.js";
 import { formatZodError, HttpError, NotFoundError } from "./errors.js";
 import type { Queue } from "./queue.js";
 import { createAuthPreHandler } from "./rbac.js";
+import { insightRoutes } from "./routes/insights.js";
 import { findingRoutes } from "./routes/findings.js";
 import { policyRoutes } from "./routes/policies.js";
 import { projectRoutes } from "./routes/projects.js";
@@ -139,6 +140,7 @@ export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstanc
         });
         await secured.register(findingRoutes, { store: options.store });
         await secured.register(policyRoutes, { store: options.store });
+        await secured.register(insightRoutes, { store: options.store });
       });
     },
     { prefix: "/api/v1" },

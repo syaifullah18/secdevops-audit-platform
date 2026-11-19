@@ -195,9 +195,9 @@ export function LandingScreen() {
         <div className="mx-auto max-w-4xl px-4 pb-16">
           <img
             src="/demo.gif"
-            alt="Walkthrough of the dashboard, a finding triage, the release gate, and a compliance export"
+            alt="Walkthrough of the dashboard, a finding triage with a proposed remediation, a project's findings, the release gate, and a compliance export"
             width={1280}
-            height={719}
+            height={718}
             className="block h-auto w-full rounded-xl shadow-2xl shadow-black/40"
           />
         </div>

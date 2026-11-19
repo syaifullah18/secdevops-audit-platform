@@ -108,12 +108,15 @@ export function LandingScreen() {
   return (
     <div className="sdap-shell min-h-screen" data-testid="landing-screen">
       <header className="sticky top-0 z-10 border-b border-outline-variant/40 bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
-          <Link to="/welcome" className="flex items-center gap-2 font-bold font-headline">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white">
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3 sm:gap-4">
+          <Link
+            to="/welcome"
+            className="flex shrink-0 items-center gap-2 font-bold font-headline"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white">
               <Icon name="security" filled className="text-lg" />
             </span>
-            SecDevOps Audit
+            <span className="hidden sm:inline">SecDevOps Audit</span>
           </Link>
           <nav className="ml-4 hidden gap-5 text-sm text-on-surface-variant sm:flex">
             <a href="#features">Features</a>
@@ -122,21 +125,38 @@ export function LandingScreen() {
             <a href="#faq">FAQ</a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <a href={REPO} className={`${btn.secondary} hidden sm:inline-flex`} rel="noreferrer">
+            <a
+              href={REPO}
+              className={`${btn.secondary} !hidden whitespace-nowrap sm:!inline-flex`}
+              rel="noreferrer"
+            >
               GitHub
             </a>
             {user ? (
-              <Link to="/" className={btn.primary} data-testid="landing-dashboard">
+              <Link
+                to="/"
+                className={`${btn.primary} whitespace-nowrap`}
+                data-testid="landing-dashboard"
+              >
                 Open dashboard
               </Link>
             ) : (
               <>
-                <Link to="/login" className={btn.secondary} data-testid="landing-login">
+                <Link
+                  to="/login"
+                  className={`${btn.secondary} whitespace-nowrap`}
+                  data-testid="landing-login"
+                >
                   Log in
                 </Link>
                 {canSignUp && (
-                  <Link to="/signup" className={btn.primary} data-testid="landing-signup">
-                    Create account
+                  <Link
+                    to="/signup"
+                    className={`${btn.primary} whitespace-nowrap`}
+                    data-testid="landing-signup"
+                  >
+                    <span className="sm:hidden">Sign up</span>
+                    <span className="hidden sm:inline">Create account</span>
                   </Link>
                 )}
               </>
@@ -170,6 +190,26 @@ export function LandingScreen() {
             </a>
           </div>
           <p className="mt-4 text-xs text-on-surface-variant">{trust}</p>
+        </div>
+
+        <div className="mx-auto max-w-4xl px-4 pb-16">
+          <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl shadow-black/40">
+            <div className="flex items-center gap-1.5 border-b border-outline-variant/60 bg-surface-container px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="ml-3 truncate text-xs text-on-surface-variant">
+                secdevops.ipungsyaifullah.my.id
+              </span>
+            </div>
+            <img
+              src="/demo.gif"
+              alt="Walkthrough of the dashboard, release gate status, a compliance export, and the admin user list"
+              width={606}
+              height={595}
+              className="block h-auto w-full"
+            />
+          </div>
         </div>
 
         <Section

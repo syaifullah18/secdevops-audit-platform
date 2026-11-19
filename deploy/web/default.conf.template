@@ -32,6 +32,8 @@ server {
     # Server-sent events (/runs/:id/events/stream) must not be buffered.
     proxy_buffering off;
     proxy_read_timeout 1h;
+    # findings.json imports can be several MB (the API enforces its own 25 MB limit).
+    client_max_body_size 26m;
   }
 
   location / {

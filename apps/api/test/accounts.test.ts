@@ -105,6 +105,36 @@ describe.each(["memory", "postgres"] as const)("native accounts on %s", (backend
     expect(ownerMe.json().clientIds).toBe("*");
   });
 
+  it("serves no dashboard data without a signed-in session", async () => {
+    const paths = [
+      "/projects",
+      "/projects/p1/runs",
+      "/runs/r1",
+      "/findings/f1",
+      "/findings",
+      "/review-queue",
+      "/projects/p1/gate",
+      "/policies/default",
+      "/account",
+      "/admin/users",
+      "/admin/audit",
+    ];
+    for (const path of paths) {
+      const res = await c.app.inject({ method: "GET", url: `/api/v1${path}` });
+      expect(res.statusCode, path).toBe(401);
+      const bad = await c.app.inject({
+        method: "GET",
+        url: `/api/v1${path}`,
+        headers: { authorization: "Bearer sdap_s_not-a-real-session" },
+      });
+      expect(bad.statusCode, `${path} with a bad token`).toBe(401);
+    }
+    // Only the sign-in surface is public.
+    expect((await c.app.inject({ method: "GET", url: "/api/v1/auth/config" })).statusCode).toBe(
+      200,
+    );
+  });
+
   it("rejects short passwords and duplicate emails", async () => {
     expect(
       (await post(c, "/auth/signup", { email: "a@example.test", name: "A", password: "short" }))

@@ -168,8 +168,18 @@ export const authPublicRoutes: FastifyPluginAsync<{
       const code = await accounts.signInWithProvider(name, profile, meta(req));
       return back(reply, { code });
     } catch (err) {
-      req.log.info({ err: (err as Error).message }, "oauth sign-in failed");
-      const shown = err instanceof ForbiddenError ? err.message : "Sign-in failed. Try again.";
+      const e = err as Error;
+      req.log.warn({ err: e.message, name: e.name, provider: name }, "oauth sign-in failed");
+      // The real reason stays in the server log; the page gets a hint a self-hoster can act on.
+      const text = `${e.name} ${e.message}`;
+      const shown =
+        err instanceof ForbiddenError
+          ? err.message
+          : /state|JWT|JWS/i.test(text)
+            ? "The sign-in expired or was started in another browser. Start again from the sign-in page."
+            : /failed \(\d+\)|no access token|no account id/i.test(text)
+              ? "The provider rejected the request. The server's client ID, client secret or redirect URL may be wrong."
+              : "Sign-in failed. Try again.";
       return back(reply, { error: shown });
     }
   });

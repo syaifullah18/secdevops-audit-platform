@@ -179,7 +179,11 @@ export const authPublicRoutes: FastifyPluginAsync<{
             ? "The sign-in expired or was started in another browser. Start again from the sign-in page."
             : /failed \(\d+\)|no access token|no account id/i.test(text)
               ? "The provider rejected the request. The server's client ID, client secret or redirect URL may be wrong."
-              : "Sign-in failed. Try again.";
+              : /fetch failed|ENOTFOUND|ECONN|ETIMEDOUT|EAI_AGAIN|timeout|abort/i.test(text)
+                ? "The server could not reach the sign-in provider. Check its outbound network access."
+                : /relation .* does not exist|no such table|account_/i.test(text)
+                  ? "The account database is not set up. Apply migration 0001_native_accounts.sql."
+                  : "Sign-in failed. Try again.";
       return back(reply, { error: shown });
     }
   });

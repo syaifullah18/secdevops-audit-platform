@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client.js";
+import { ImportFindingsForm } from "../components/ImportFindingsForm.js";
+import { useApp } from "../context/AppContext.js";
 import type { Project, Run, Finding, GateResult, AuditMode } from "@sdap/core";
 import type { CoverageSummary } from "../api/types.js";
 import { SeverityBadge, StatusBadge, VerdictBadge } from "../components/Badges.js";
@@ -28,6 +30,12 @@ export function ProjectViewScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Trigger Run state
+  const { user } = useApp();
+  const canImport = Boolean(
+    user?.roles.some((r) => r === "admin" || r === "devops" || r === "security"),
+  );
+  const [importing, setImporting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [newRunMode, setNewRunMode] = useState<AuditMode>("focused");
   const [newRunRef, setNewRunRef] = useState("main");
@@ -39,7 +47,8 @@ export function ProjectViewScreen() {
 
     async function load() {
       try {
-        setLoading(true);
+        // Only the first load blanks the page; a refresh after an import keeps the form visible.
+        if (reloadKey === 0) setLoading(true);
         const [proj, runPage, fPage, gateRes, cov] = await Promise.all([
           api.getProject(id!),
           api.getRuns(id!),
@@ -68,7 +77,7 @@ export function ProjectViewScreen() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   const handleTriggerRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -146,6 +155,17 @@ export function ProjectViewScreen() {
                 <span className="text-outline">@ {latest.commitSha.slice(0, 7)}</span>
               )}
             </span>
+            {canImport && (
+              <button
+                type="button"
+                className={btn.secondary}
+                onClick={() => setImporting((v) => !v)}
+                data-testid="import-findings-button"
+              >
+                <Icon name="upload_file" className="text-[16px]" />
+                Import findings
+              </button>
+            )}
             <button
               type="button"
               className={btn.primary}
@@ -237,6 +257,14 @@ export function ProjectViewScreen() {
             </form>
           </div>
         </div>
+      )}
+
+      {importing && (
+        <ImportFindingsForm
+          project={project}
+          onCancel={() => setImporting(false)}
+          onDone={() => setReloadKey((k) => k + 1)}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

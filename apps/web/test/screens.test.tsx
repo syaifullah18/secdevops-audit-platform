@@ -57,6 +57,34 @@ describe("Component Screen Tests against Mock API", () => {
     expect(screen.getByTestId("cross-project-attack-class")).toBeTruthy();
   });
 
+  it("imports a findings.json from the project page and reports the counts", async () => {
+    renderWithRouter(
+      <Routes>
+        <Route path="/projects/:id" element={<ProjectViewScreen />} />
+      </Routes>,
+      [`/projects/${FIXTURE_PROJECT_1_ID}`],
+    );
+    fireEvent.click(await screen.findByTestId("import-findings-button"));
+    const file = new File(
+      [JSON.stringify([{ verdict: "confirmed" }, { verdict: "rejected" }])],
+      "findings.json",
+      {
+        type: "application/json",
+      },
+    );
+    // jsdom's File has no text(); provide it the way browsers do.
+    Object.defineProperty(file, "text", { value: () => Promise.resolve(JSON.stringify([{}, {}])) });
+    fireEvent.change(screen.getByTestId("import-findings-file"), { target: { files: [file] } });
+    fireEvent.click(screen.getByTestId("import-findings-submit"));
+    await waitFor(() => expect(screen.getByText(/Imported 2 findings/)).toBeTruthy());
+
+    const bad = new File(["not json"], "findings.json");
+    Object.defineProperty(bad, "text", { value: () => Promise.resolve("not json") });
+    fireEvent.change(screen.getByTestId("import-findings-file"), { target: { files: [bad] } });
+    fireEvent.click(screen.getByTestId("import-findings-submit"));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/not valid JSON/);
+  });
+
   it("renders ProjectViewScreen with gate status, coverage ledger, run history and findings", async () => {
     renderWithRouter(
       <Routes>

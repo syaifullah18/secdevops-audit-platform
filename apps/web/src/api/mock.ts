@@ -593,6 +593,17 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
         });
       }
 
+      // POST /projects/:id/import (the demo data is not modified; it only acknowledges the file)
+      const importMatch = pathname.match(/^\/projects\/([^/]+)\/import$/);
+      if (importMatch && method === "POST") {
+        const body = init?.body ? JSON.parse(init.body as string) : {};
+        const n = Array.isArray(body.findings) ? body.findings.length : 0;
+        return new Response(
+          JSON.stringify({ runId: crypto.randomUUID(), imported: n, created: n, updated: 0 }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
       // GET /projects/:id
       const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
       if (projectMatch && projectMatch[1] && method === "GET") {

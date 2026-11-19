@@ -68,6 +68,13 @@ export async function request<T>(
   return json as T;
 }
 
+export interface ImportResult {
+  runId: string;
+  imported: number;
+  created: number;
+  updated: number;
+}
+
 export const api = {
   async getProjects(): Promise<Project[]> {
     return request("/projects", { method: "GET" }, z.array(Project));
@@ -86,6 +93,16 @@ export const api = {
       },
       Project,
     );
+  },
+
+  async importFindings(
+    projectId: string,
+    body: { findings: unknown; coverageLedger?: unknown; ref?: string },
+  ): Promise<ImportResult> {
+    return request(`/projects/${projectId}/import`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
   },
 
   async getRuns(projectId?: string): Promise<RunPage> {

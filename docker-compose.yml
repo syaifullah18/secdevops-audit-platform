@@ -1,7 +1,10 @@
 # SecDevOps Audit Platform: one-command evaluation stack.
 #   cp .env.example .env && docker compose up --build
 # Variables come from .env (see .env.example and deploy/compose/env.compose.example).
-# Only the web UI, API and Grafana are published, on 127.0.0.1. No telemetry is enabled anywhere.
+# Only the web UI and API are published, on 127.0.0.1. No telemetry is enabled anywhere.
+# The app itself only exposes Prometheus metrics and JSON logs on stdout. Prometheus, Loki, Alloy
+# and Grafana are an optional bundled viewer: `docker compose --profile observability up`.
+# To use your own Grafana instead, scrape the API and worker /metrics and ship container logs.
 name: sdap
 
 x-logging: &logging
@@ -163,6 +166,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.5.0
+    profiles: ["observability"]
     restart: unless-stopped
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -180,6 +184,7 @@ services:
 
   loki:
     image: grafana/loki:3.5.0
+    profiles: ["observability"]
     restart: unless-stopped
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
@@ -196,6 +201,7 @@ services:
   # Ships container logs to Loki with a small, fixed label set (see deploy/loki/README.md).
   alloy:
     image: grafana/alloy:v1.10.0
+    profiles: ["observability"]
     restart: unless-stopped
     command:
       - run
@@ -213,6 +219,7 @@ services:
 
   grafana:
     image: grafana/grafana:12.1.0
+    profiles: ["observability"]
     restart: unless-stopped
     depends_on:
       prometheus: { condition: service_healthy }

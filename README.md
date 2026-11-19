@@ -57,7 +57,7 @@ graph TD
 
 ### 1. Local Evaluation (Docker Compose)
 
-Spin up the complete evaluation stack (API, Web, Worker, Postgres, Redis, Prometheus, Loki, Alloy, Grafana) with a single command:
+Spin up the evaluation stack (API, Web, Worker, Postgres, Redis) with a single command:
 
 ```sh
 # Copy environment template
@@ -69,7 +69,8 @@ docker compose up --build -d
 
 - **Web Dashboard**: [http://localhost:3000](http://localhost:3000)
 - **API Swagger/Docs**: [http://localhost:8080/docs](http://localhost:8080/docs)
-- **Grafana Monitoring**: [http://localhost:3001](http://localhost:3001) (`admin` / `sdap-change-me`)
+
+**Observability is optional.** The platform only exposes Prometheus metrics (`/metrics`) and JSON logs on stdout; it does not need Grafana to run. Point your own Prometheus/Loki/Grafana at them, or start the bundled viewer (Prometheus, Loki, Alloy, Grafana) with `docker compose --profile observability up -d` and open [http://localhost:3001](http://localhost:3001) (`admin` / `sdap-change-me`).
 
 ### 2. Hardened Production Mode
 

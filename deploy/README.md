@@ -6,7 +6,7 @@ CI templates live in `deploy/ci` (WS6) and the sandbox runtime in `deploy/sandbo
 
 | Path                        | What                                                                                          |
 | --------------------------- | --------------------------------------------------------------------------------------------- |
-| `../docker-compose.yml`     | Evaluation stack: api, worker, web, postgres 17, redis 7, prometheus, loki, alloy, grafana    |
+| `../docker-compose.yml`     | Evaluation stack: api, worker, web, postgres 17, redis 7; optional `observability` profile    |
 | `compose/`                  | Overrides (`docker-compose.dev.yml`, `docker-compose.hardened.yml`) and `env.compose.example` |
 | `../apps/*/Dockerfile`      | Multi-stage, Node 24 slim build, non-root, `pnpm deploy --prod`                               |
 | `web/default.conf.template` | nginx config for the web image (static files, `/api` proxy, SSE-safe)                         |
@@ -24,8 +24,10 @@ cat deploy/compose/env.compose.example >> .env   # optional: ports, passwords, r
 docker compose up --build
 ```
 
-- Web: http://localhost:3000, API: http://localhost:8080, Grafana: http://localhost:3001
-  (`admin` / `GRAFANA_ADMIN_PASSWORD`, default `sdap-change-me`).
+- Web: http://localhost:3000, API: http://localhost:8080.
+- Observability is opt-in. The app only exposes `/metrics` and JSON logs; scrape and ship them to
+  your own Grafana stack, or run the bundled one with `docker compose --profile observability up`
+  (Grafana: http://localhost:3001, `admin` / `GRAFANA_ADMIN_PASSWORD`, default `sdap-change-me`).
 - Every port is bound to `127.0.0.1`; Postgres, Redis, Prometheus and Loki are not published.
   Use `-f deploy/compose/docker-compose.dev.yml` to publish them locally.
 - All passwords have evaluation-only defaults. Set `POSTGRES_PASSWORD`, `GRAFANA_PG_PASSWORD` and

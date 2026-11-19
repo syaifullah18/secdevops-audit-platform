@@ -43,7 +43,7 @@ describe("applyMigrations", () => {
     );
 
     const applied = await applyMigrations(db(c), MIGRATIONS_DIR);
-    expect(applied).not.toContain(first);
+    expect(applied).toContain(first); // recorded; its tables already existed and were left alone
     expect(applied.some((f) => f.includes("native_accounts"))).toBe(true);
     expect(
       (await c.query("select to_regclass('public.account_identities') as t")).rows[0],
@@ -52,19 +52,42 @@ describe("applyMigrations", () => {
     });
   });
 
-  it("leaves nothing half-applied when a migration fails", async () => {
+  it("finishes a database that is partly migrated (columns or tables already present)", async () => {
+    c = new PGlite();
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const files = readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+    for (const f of files) {
+      await c.exec(
+        readFileSync(`${MIGRATIONS_DIR}/${f}`, "utf8").replaceAll("--> statement-breakpoint", ""),
+      );
+    }
+    // Everything already exists, as after a run that applied the SQL but never recorded it.
+    const applied = await applyMigrations(db(c), MIGRATIONS_DIR);
+    expect(applied.length).toBe(files.length);
+    expect(await applyMigrations(db(c), MIGRATIONS_DIR)).toEqual([]);
+  });
+
+  it("stops on a real error and does not record the migration", async () => {
     c = new PGlite();
     const { mkdtempSync, writeFileSync } = await import("node:fs");
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const dir = mkdtempSync(join(tmpdir(), "mig-"));
-    writeFileSync(join(dir, "0000_bad.sql"), 'CREATE TABLE "a" (id int);\nSELECT nope();');
+    writeFileSync(
+      join(dir, "0000_bad.sql"),
+      'CREATE TABLE "a" (id int);\n--> statement-breakpoint\nSELECT nope();',
+    );
     await expect(applyMigrations(db(c), dir)).rejects.toThrow(/0000_bad.sql failed/);
-    expect((await c.query("select to_regclass('public.a') as t")).rows[0]).toMatchObject({
-      t: null,
-    });
     expect(
       (await c.query("select count(*)::int as n from sdap_schema_migrations")).rows[0],
     ).toMatchObject({ n: 0 });
+    // Re-running after fixing the file resumes: the table made before the failure is tolerated.
+    writeFileSync(
+      join(dir, "0000_bad.sql"),
+      'CREATE TABLE "a" (id int);\n--> statement-breakpoint\nCREATE TABLE "b" (id int);',
+    );
+    expect(await applyMigrations(db(c), dir)).toEqual(["0000_bad.sql"]);
   });
 });

@@ -9,15 +9,15 @@ export interface Db {
 
 export const MIGRATIONS_DIR = fileURLToPath(new URL("../../drizzle", import.meta.url));
 const LOCK_ID = 727301;
+// duplicate_table / duplicate_column / duplicate_object (constraints, types) / duplicate_schema
+const ALREADY_EXISTS = new Set(["42P07", "42701", "42710", "42P06"]);
 
 /**
- * Applies the SQL files in `drizzle/` that this database has not seen, in order, each in one
- * transaction, and records them in `sdap_schema_migrations`.
- *
- * A database created before this table existed (by the compose init script, or by hand) already
- * contains the tables of its migrations. A file whose first table is already present is recorded
- * without running, so upgrading never re-creates anything. An advisory lock keeps two API
- * replicas from migrating at once.
+ * Applies the SQL files in `drizzle/` that this database has not seen, in order, and records them
+ * in `sdap_schema_migrations`. Statements run one at a time and an "already exists" error is
+ * skipped, so a database built earlier by the init script, by hand, or by a run that stopped
+ * halfway is brought up to date without re-creating anything. Any other error stops the start.
+ * An advisory lock keeps two API replicas from migrating at once.
  */
 export async function applyMigrations(
   db: Db,
@@ -40,31 +40,29 @@ export async function applyMigrations(
       .filter((f) => f.endsWith(".sql"))
       .sort()) {
       if (done.has(file)) continue;
-      const sql = readFileSync(join(dir, file), "utf8");
-      const probe = /CREATE TABLE "([^"]+)"/.exec(sql)?.[1];
-      const exists = probe
-        ? (await db.query("select to_regclass($1) as t", [`public."${probe}"`])).rows[0]?.["t"] !=
-          null
-        : false;
-      if (exists) {
-        log(`migration ${file}: tables already present, recorded`);
-      } else {
-        log(`migration ${file}: applying`);
-        await db.query("begin");
+      const statements = readFileSync(join(dir, file), "utf8")
+        .split("--> statement-breakpoint")
+        .map((x) => x.trim())
+        .filter(Boolean);
+      log(`migration ${file}: applying ${statements.length} statements`);
+      let skipped = 0;
+      for (const stmt of statements) {
         try {
-          await db.query(sql.replaceAll("--> statement-breakpoint", ""));
-          await db.query("insert into sdap_schema_migrations (name) values ($1)", [file]);
-          await db.query("commit");
+          await db.query(stmt);
         } catch (err) {
-          await db.query("rollback");
+          // The object is already there (created by hand or by the init script): carry on.
+          if (ALREADY_EXISTS.has(String((err as { code?: unknown }).code))) {
+            skipped++;
+            continue;
+          }
           throw new Error(
             `migration ${file} failed: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
-        applied.push(file);
-        continue;
       }
+      if (skipped) log(`migration ${file}: ${skipped} objects already existed`);
       await db.query("insert into sdap_schema_migrations (name) values ($1)", [file]);
+      applied.push(file);
     }
   } finally {
     await db.query("select pg_advisory_unlock($1)", [LOCK_ID]);

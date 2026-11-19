@@ -6,13 +6,9 @@ import {
   UNAUTHORIZED_EVENT,
   clearSession,
   clearSignedOutFlag,
-  decodeToken,
   getStoredUser,
-  getToken,
   isExpired,
-  isNativeToken,
   setStoredUser,
-  setToken,
   userFromAccount,
   wasSignedOut,
   type AccountView,
@@ -24,8 +20,6 @@ interface AppContextValue {
   toggleTheme: () => void;
   /** Signed-in user, or null when signed out. */
   user: SessionUser | null;
-  /** Returns an error message, or null on success. */
-  signIn: (token: string) => string | null;
   /** Starts a session issued by this instance (password, provider or sign-up). */
   startSession: (s: SessionIssue) => void;
   /** Applies a fresh profile (after a rename, or when roles changed server-side). */
@@ -36,16 +30,11 @@ interface AppContextValue {
 }
 
 const initialUser = (): SessionUser | null => {
-  const token = getToken();
-  if (token && isNativeToken(token)) {
-    const u = getStoredUser();
-    if (u && !isExpired(u)) return u;
-    clearSession();
-    return null;
-  }
-  if (token) {
-    const u = decodeToken(token);
-    if (u && !isExpired(u)) return u;
+  // The cookie cannot be inspected from here, so the stored profile stands in until /account
+  // answers; a 401 then ends the session.
+  const u = getStoredUser();
+  if (u) {
+    if (!isExpired(u)) return u;
     clearSession();
     return null;
   }
@@ -75,15 +64,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(() => {
-    const token = getToken();
-    // Revoke the session server-side first (the request reads the token synchronously).
-    if (token && isNativeToken(token)) void authApi.logout().catch(() => undefined);
+    // Ask the server to revoke the session and clear the cookie; the screen does not wait for it.
+    if (user?.native) void authApi.logout().catch(() => undefined);
     endLocal();
-  }, [endLocal]);
+  }, [endLocal, user]);
 
   const startSession = useCallback((s: SessionIssue) => {
     const u = userFromAccount(s.user, Date.parse(s.expiresAt));
-    setToken(s.token);
     setStoredUser(u);
     setUser(u);
   }, []);
@@ -95,19 +82,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (cur.native) setStoredUser(next);
       return next;
     });
-  }, []);
-
-  const signIn = useCallback((raw: string): string | null => {
-    const token = raw.trim().replace(/^Bearer\s+/i, "");
-    if (isNativeToken(token)) {
-      return "Sign in with your email and password. API tokens (sdap_pat_…) are for scripts and CI.";
-    }
-    const u = decodeToken(token);
-    if (!u) return "That is not a valid access token (expected a JWT with a subject claim).";
-    if (isExpired(u)) return "That token has already expired.";
-    setToken(token);
-    setUser(u);
-    return null;
   }, []);
 
   const signInDemo = useCallback((): boolean => {
@@ -154,7 +128,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme,
         toggleTheme,
         user,
-        signIn,
         startSession,
         updateUser,
         signInDemo,

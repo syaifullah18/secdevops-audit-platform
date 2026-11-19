@@ -4,9 +4,15 @@ import { z } from "zod";
 import { BadRequestError, ForbiddenError, NotFoundError } from "../errors.js";
 import { parseWith } from "../http.js";
 import { requireRoles } from "../rbac.js";
+import {
+  clearSessionCookie,
+  isBrowserRequest,
+  readCookie,
+  setSessionCookie,
+} from "../session-cookie.js";
 import { PROVIDER_NAMES, type OAuthFlow, type ProviderName } from "./oauth.js";
 import { rateLimit } from "./ratelimit.js";
-import { type RequestMeta, toPublic, type AccountService } from "./service.js";
+import { type RequestMeta, type SessionIssue, toPublic, type AccountService } from "./service.js";
 import type { ClientScope } from "./types.js";
 
 const meta = (req: FastifyRequest): RequestMeta => ({
@@ -19,16 +25,6 @@ const Password = z.string().min(1).max(256);
 const Scope = z.union([z.literal("*"), z.array(z.string().min(1).max(64)).max(200)]);
 
 const OAUTH_COOKIE = "sdap_oauth";
-
-const readCookie = (req: FastifyRequest, name: string): string | undefined => {
-  const raw = req.headers.cookie;
-  if (!raw) return undefined;
-  for (const part of raw.split(";")) {
-    const [k, ...rest] = part.trim().split("=");
-    if (k === name) return rest.join("=");
-  }
-  return undefined;
-};
 
 const sessionView = (
   t: {
@@ -57,6 +53,16 @@ export const authPublicRoutes: FastifyPluginAsync<{
 }> = async (app, { accounts, oauth }) => {
   const cfg = accounts.cfg;
   const tight = rateLimit("auth-write", 20, 15 * 60_000);
+  const secure = cfg.apiPublicUrl.startsWith("https://");
+  /**
+   * The web app (it sends the CSRF header) gets the session as an HttpOnly cookie and never sees
+   * the token. Other clients, such as scripts, still receive it in the body.
+   */
+  const deliver = (req: FastifyRequest, reply: FastifyReply, s: SessionIssue) => {
+    if (!isBrowserRequest(req)) return s;
+    setSessionCookie(reply, s.token, s.expiresAt, secure);
+    return { expiresAt: s.expiresAt, user: s.user };
+  };
   const loose = rateLimit("auth-read", 120, 60_000);
 
   app.get("/auth/config", { preHandler: [loose] }, async () => ({
@@ -81,13 +87,13 @@ export const authPublicRoutes: FastifyPluginAsync<{
     const res = await accounts.signup(body, meta(req));
     return reply.status(res.session ? 201 : 202).send({
       requiresVerification: res.requiresVerification,
-      ...(res.session ? { session: res.session } : {}),
+      ...(res.session ? { session: deliver(req, reply, res.session) } : {}),
     });
   });
 
-  app.post("/auth/login", { preHandler: [tight] }, async (req) => {
+  app.post("/auth/login", { preHandler: [tight] }, async (req, reply) => {
     const body = parseWith(z.object({ email: Email, password: Password }), req.body, "login");
-    return accounts.login(body, meta(req));
+    return deliver(req, reply, await accounts.login(body, meta(req)));
   });
 
   app.post("/auth/verify", { preHandler: [tight] }, async (req, reply) => {
@@ -188,9 +194,9 @@ export const authPublicRoutes: FastifyPluginAsync<{
     }
   });
 
-  app.post("/auth/oauth/exchange", { preHandler: [tight] }, async (req) => {
+  app.post("/auth/oauth/exchange", { preHandler: [tight] }, async (req, reply) => {
     const { code } = parseWith(z.object({ code: z.string().min(1).max(200) }), req.body, "request");
-    return accounts.exchangeCode(code, meta(req));
+    return deliver(req, reply, await accounts.exchangeCode(code, meta(req)));
   });
 };
 
@@ -212,6 +218,7 @@ export const accountRoutes: FastifyPluginAsync<{ accounts: AccountService }> = a
   app.post("/auth/logout", async (req, reply) => {
     const a = needAccount(req);
     if (a.kind === "session") await accounts.logout(a.id, a.tokenId, meta(req));
+    clearSessionCookie(reply, accounts.cfg.apiPublicUrl.startsWith("https://"));
     return reply.status(204).send();
   });
 
@@ -336,6 +343,7 @@ export const accountRoutes: FastifyPluginAsync<{ accounts: AccountService }> = a
       "request",
     );
     await accounts.deleteAccount(a.id, body, meta(req));
+    clearSessionCookie(reply, accounts.cfg.apiPublicUrl.startsWith("https://"));
     return reply.status(204).send();
   });
 

@@ -130,7 +130,12 @@ export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstanc
         });
       }
       await api.register(async (secured) => {
-        secured.addHook("preHandler", createAuthPreHandler(auth));
+        secured.addHook(
+          "preHandler",
+          createAuthPreHandler(auth, {
+            secureCookie: config.accounts.apiPublicUrl.startsWith("https://"),
+          }),
+        );
         if (options.accounts) await secured.register(accountRoutes, { accounts: options.accounts });
         await secured.register(projectRoutes, { store: options.store });
         await secured.register(runRoutes, {

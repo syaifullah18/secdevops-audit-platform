@@ -125,7 +125,7 @@ The UI follows the Stitch redesign (`stitch-redesign/*.html` are the reference r
 - `/signup` (invitation links look like `/signup?invite=…`), `/forgot`, `/reset/:token`, `/verify/:token` and `/login/callback` finish the account flows. Whether sign-up is open, by invitation or closed is set on the server (`SIGNUP_MODE`).
 - `/account`: profile, change or set a password, linked Google/GitHub accounts, active sessions (sign out others), API tokens for scripts and CI (secret shown once, limited to your roles), data export and account deletion. Sessions end on a 401 or at expiry.
 - `/admin` (admin role only): users (roles, clients, team, disable, delete), invitations, and the audit log.
-- The session token is kept in `localStorage` and sent as a bearer token. Claims in pasted OIDC tokens are decoded for display only; the API enforces roles and client scope. See D-019 and `deploy/README.md` ("Public hosting").
+- The session is an HttpOnly cookie set by the API; scripts on the page cannot read it, and every request carries `X-SDAP-CSRF`. Only the signed-in profile (no secret) is kept in `localStorage`. The API enforces roles and client scope. See D-019 and `deploy/README.md` ("Public hosting").
 - Theme: a labelled switch (`role="switch"`) in the sidebar and on the auth screens.
 
 ## Local dataset from real audit runs

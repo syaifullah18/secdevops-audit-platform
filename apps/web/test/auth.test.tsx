@@ -10,16 +10,12 @@ import { LoginScreen } from "../src/screens/Login.js";
 import { ProfileScreen } from "../src/screens/Profile.js";
 import {
   UNAUTHORIZED_EVENT,
-  decodeToken,
   initialsOf,
   isExpired,
-  setToken,
+  setStoredUser,
   topRole,
 } from "../src/auth/session.js";
 import { api } from "../src/api/client.js";
-
-const b64 = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, "");
-const jwt = (claims: object) => `${b64({ alg: "none" })}.${b64(claims)}.sig`;
 
 const Where = () => <div data-testid="where">{useLocation().pathname}</div>;
 
@@ -47,14 +43,18 @@ const app = (path: string) =>
   );
 
 describe("session helpers", () => {
-  it("decodes claims and rejects malformed tokens", () => {
-    expect(decodeToken("nope")).toBeNull();
-    expect(decodeToken(jwt({ name: "x" }))).toBeNull();
-    expect(decodeToken(jwt({ sub: "u1" }))?.subject).toBe("u1");
-  });
   it("derives initials, expiry and top role", () => {
     expect(initialsOf("Alex Vance")).toBe("AV");
-    const u = decodeToken(jwt({ sub: "u", exp: 1 }))!;
+    const u = {
+      subject: "u",
+      name: "u",
+      initials: "U",
+      roles: [],
+      team: null,
+      clientIds: [] as string[],
+      expiresAt: 1,
+      demo: false,
+    };
     expect(isExpired(u)).toBe(true);
     expect(isExpired({ ...u, expiresAt: null })).toBe(false);
     expect(topRole(["viewer", "admin"])).toBe("admin");
@@ -131,15 +131,41 @@ describe("theme switch and API auth header", () => {
     expect(sw.getAttribute("aria-checked")).not.toBe(before);
   });
 
-  it("sends the stored token as a bearer header", async () => {
-    setToken("abc.def.ghi");
+  it("sends the CSRF header and never an Authorization header", async () => {
     const spy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(
-        new Response("{}", { status: 200, headers: { "content-type": "application/json" } }),
+        new Response("[]", { status: 200, headers: { "content-type": "application/json" } }),
       );
     await api.getProjects().catch(() => undefined);
     const init = spy.mock.calls[0]?.[1] as RequestInit | undefined;
-    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer abc.def.ghi");
+    const h = new Headers(init?.headers);
+    expect(h.get("x-sdap-csrf")).toBe("1");
+    expect(h.get("authorization")).toBeNull();
+    expect(init?.credentials).toBe("same-origin");
+  });
+
+  it("a 401 for a signed-in profile ends the session, a 401 for nobody does not", async () => {
+    const seen = vi.fn();
+    window.addEventListener(UNAUTHORIZED_EVENT, seen);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response("{}", { status: 401 }),
+    );
+    await api.getProjects().catch(() => undefined);
+    expect(seen).not.toHaveBeenCalled();
+    setStoredUser({
+      subject: "a@example.test",
+      name: "A",
+      initials: "A",
+      roles: ["viewer"],
+      team: null,
+      clientIds: [],
+      expiresAt: null,
+      demo: false,
+      native: true,
+    });
+    await api.getProjects().catch(() => undefined);
+    expect(seen).toHaveBeenCalledTimes(1);
+    window.removeEventListener(UNAUTHORIZED_EVENT, seen);
   });
 });

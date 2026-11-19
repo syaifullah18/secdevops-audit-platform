@@ -22,7 +22,7 @@ import {
   type OrgOverviewMetrics,
 } from "./types.js";
 import { mockStore } from "./mock.js";
-import { UNAUTHORIZED_EVENT, getToken } from "../auth/session.js";
+import { UNAUTHORIZED_EVENT, getStoredUser } from "../auth/session.js";
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL as string) || "/api/v1";
 
@@ -40,12 +40,13 @@ export async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const token = getToken();
-  if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+  // The session is an HttpOnly cookie the browser attaches itself. This header marks the call as
+  // coming from the app: the API requires it on writes (CSRF) and then sets cookies, not tokens.
+  headers.set("X-SDAP-CSRF", "1");
 
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401 && token) {
-    // The API rejected the token (expired or revoked): drop the session and go to sign-in.
+  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
+  if (res.status === 401 && getStoredUser()) {
+    // The API rejected the session (expired or revoked): drop it and go to sign-in.
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
   }
   if (!res.ok) {

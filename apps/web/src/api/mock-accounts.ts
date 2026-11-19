@@ -35,6 +35,9 @@ const rand = () => Math.random().toString(36).slice(2, 12);
 let users: MockUser[] = [];
 let sessions: MockSession[] = [];
 let tokens: MockToken[] = [];
+// The real API keeps the session in an HttpOnly cookie. The mock has no cookies, so it remembers
+// the current session here and never puts the secret in a response.
+let currentToken: string | null = null;
 let invitations: Invitation[] = [];
 let audit: AuditEvent[] = [];
 
@@ -60,6 +63,7 @@ export const resetMockAccounts = (): void => {
     mk("Sam Okoye", "sam@example.test", ["developer"], ["civd"]),
   ];
   sessions = [];
+  currentToken = null;
   tokens = [];
   invitations = [];
   audit = [
@@ -90,8 +94,9 @@ const bearer = (init?: RequestInit): string | null => {
   return h?.replace(/^Bearer\s+/i, "") ?? null;
 };
 
-const open = (user: MockUser): { token: string; expiresAt: string; user: AccountView } => {
+const open = (user: MockUser): { expiresAt: string; user: AccountView } => {
   const token = `sdap_s_mock_${rand()}${rand()}`;
+  currentToken = token;
   sessions.push({ id: uid(), token, userId: user.id, createdAt: nowIso() });
   user.lastLoginAt = nowIso();
   audit.unshift({
@@ -103,7 +108,7 @@ const open = (user: MockUser): { token: string; expiresAt: string; user: Account
     ip: "127.0.0.1",
     details: null,
   });
-  return { token, expiresAt: new Date(Date.now() + 14 * 864e5).toISOString(), user: strip(user) };
+  return { expiresAt: new Date(Date.now() + 14 * 864e5).toISOString(), user: strip(user) };
 };
 
 /** Returns a Response for account endpoints, or null when the path is not one of them. */
@@ -171,7 +176,7 @@ export function handleMockAccounts(
   }
 
   // ----- authenticated: tokenless calls are the demo user (mock mode signs it in without a token)
-  const tok = bearer(init);
+  const tok = bearer(init) ?? currentToken;
   const session = tok ? sessions.find((s) => s.token === tok) : undefined;
   const me = session ? users.find((u) => u.id === session.userId) : tok ? undefined : users[0];
   if (!me) return fail(401, "Invalid or expired token");
@@ -179,6 +184,7 @@ export function handleMockAccounts(
 
   if (pathname === "/auth/logout" && method === "POST") {
     sessions = sessions.filter((s) => s.id !== session?.id);
+    currentToken = null;
     return respond(204);
   }
   if (pathname === "/account" && method === "GET") {

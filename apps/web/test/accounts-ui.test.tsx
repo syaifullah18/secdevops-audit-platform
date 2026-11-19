@@ -90,7 +90,9 @@ describe("accounts UI (mock API)", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/incorrect email or password/i);
     await signInAs(DEMO_EMAIL);
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/"));
-    expect(localStorage.getItem("sdap_token")).toMatch(/^sdap_s_/);
+    // The session secret is an HttpOnly cookie: nothing in page storage holds it.
+    expect(localStorage.getItem("sdap_token")).toBeNull();
+    expect(JSON.stringify({ ...localStorage })).not.toMatch(/sdap_s_/);
   });
 
   it("creates an account, checks the passwords match, and signs the new user in", async () => {

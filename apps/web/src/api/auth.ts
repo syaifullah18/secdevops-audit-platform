@@ -13,8 +13,8 @@ export interface AuthConfig {
   providers: Array<"google" | "github">;
 }
 
+/** The session secret travels only as an HttpOnly cookie; it is never in this body. */
 export interface SessionIssue {
-  token: string;
   expiresAt: string;
   user: AccountView;
 }

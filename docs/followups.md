@@ -31,4 +31,3 @@ Items found during lead review and testing. Owner in brackets.
 - [api] Add OpenAPI entries for `/auth/*`, `/account/*` and `/admin/*` (the routes are implemented and tested, not yet in `openapi.json`).
 - [api] Optional MFA (TOTP) and WebAuthn for native accounts; per-project membership instead of client-id scope.
 - [api] Move the sign-in rate limiter and lockout counters to Redis so they hold across several API replicas.
-- [web] Replace bearer tokens in `localStorage` with an HttpOnly, SameSite session cookie plus a CSRF header.

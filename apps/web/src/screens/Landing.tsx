@@ -205,8 +205,8 @@ export function LandingScreen() {
             <img
               src="/demo.gif"
               alt="Walkthrough of the dashboard, release gate status, a compliance export, and the admin user list"
-              width={606}
-              height={595}
+              width={1513}
+              height={723}
               className="block h-auto w-full"
             />
           </div>
@@ -232,7 +232,7 @@ export function LandingScreen() {
         </Section>
 
         <Section id="how" title="How it works">
-          <ol className="grid gap-4 sm:grid-cols-3">
+          <ol className="grid list-none gap-4 sm:grid-cols-3">
             {STEPS.map(([title, body], i) => (
               <li
                 key={title}

@@ -48,8 +48,6 @@ export interface SdapMetrics {
   tokensTotal: Counter<"phase" | "adapter" | "model" | "direction">;
   costUsdTotal: Counter<"phase" | "adapter" | "model" | "direction">;
   sliceAttemptsTotal: Counter<"phase" | "adapter" | "model" | "outcome">;
-  jevDecisionsTotal: Counter<"key" | "outcome">;
-  jevPrecision: Gauge<"key">;
 }
 
 /**
@@ -106,17 +104,6 @@ export const createMetrics = (registry: Registry = new Registry()): SdapMetrics 
       name: "sdap_slice_attempts_total",
       help: "Hunt/validate slice attempts per model; fallbacks show as outcome=fallback.",
       labelNames: ["phase", "adapter", "model", "outcome"] as const,
-    }),
-    jevDecisionsTotal: counter({
-      name: "sdap_jev_decisions_total",
-      help: "System 1 (Jev) decisions by question key and outcome. Advisory only.",
-      labelNames: ["key", "outcome"] as const,
-    }),
-    jevPrecision: new Gauge({
-      name: "sdap_jev_precision",
-      help: "System 1 (Jev) precision against System 2 verdicts, by question key (0..1).",
-      labelNames: ["key"] as const,
-      registers: [registry],
     }),
   };
 };

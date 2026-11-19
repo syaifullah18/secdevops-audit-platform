@@ -97,14 +97,13 @@ describe("grafana dashboards", () => {
     }
   });
 
-  it("Models covers attempts by model, fallback rate and Jev precision", () => {
+  it("Models covers attempts by model, and fallback rate", () => {
     const dash = asObj(readJson(`${DASH_DIR}/sdap-models.json`));
     const text = asArr(dash.panels)
       .map((p) => JSON.stringify(asObj(p).targets))
       .join("\n");
     expect(text).toContain("sdap_slice_attempts_total");
     expect(text).toContain('outcome=\\"fallback\\"');
-    expect(text).toContain("sdap_jev_precision");
   });
 });
 

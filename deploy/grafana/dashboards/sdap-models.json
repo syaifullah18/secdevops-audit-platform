@@ -1,7 +1,7 @@
 {
   "uid": "sdap-models",
   "title": "SDAP Models",
-  "description": "Model attempts, fallback rate and System 1 (Jev) precision.",
+  "description": "Model attempts, fallback rate, tokens and cost.",
   "tags": ["sdap"],
   "schemaVersion": 41,
   "version": 1,
@@ -215,73 +215,6 @@
         "defaults": {
           "unit": "currencyUSD"
         },
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 22,
-      "type": "bargauge",
-      "title": "Jev precision by question (advisory)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max by (key) (sdap_jev_precision)",
-          "editorMode": "code",
-          "legendFormat": "{{key}}"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "options": {},
-      "description": "System 1 is advisory only and never blocks a merge."
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Jev decisions by outcome",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (key, outcome) (increase(sdap_jev_decisions_total[$__rate_interval]))",
-          "editorMode": "code",
-          "legendFormat": "{{key}} {{outcome}}"
-        }
-      ],
-      "gridPos": {
-        "x": 12,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {},
         "overrides": []
       },
       "options": {}

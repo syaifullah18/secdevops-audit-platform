@@ -90,8 +90,6 @@ and register these metrics (plus default process metrics) on a fresh `Registry`:
 | `sdap_tokens_total{phase,adapter,model,direction}`                               | counter   |
 | `sdap_cost_usd_total{phase,adapter,model,direction}`                             | counter   |
 | `sdap_slice_attempts_total{phase,adapter,model,outcome}` (fallbacks are visible) | counter   |
-| `sdap_jev_decisions_total{key,outcome}`                                          | counter   |
-| `sdap_jev_precision{key}` (System 1 is advisory only)                            | gauge     |
 
 Rules: labels are bounded enums or ids, never finding titles, paths or code. Only `confirmed`
 findings count towards gate-related panels and alerts. The handles are not wired into routes or jobs
@@ -104,7 +102,7 @@ optional bearer token, because unauthenticated metrics endpoints are a known lea
   status and verdict, runs by status, failures by phase and reason, queue depth, duration p50/p95,
   tokens and cost.
 - **SDAP Models:** attempts and outcomes by model, fallback and failure rate, tokens and cost by
-  model, Jev precision and decisions.
+  model.
 - **Alert rules** (`grafana/provisioning/alerting/rules.yml`): run failure rate over 20% for 10m,
   confirmed findings past SLA (> 0), run queue backlog over 20 for 10m. Add contact points in
   Grafana; webhook URLs are credentials and are not part of the repository.

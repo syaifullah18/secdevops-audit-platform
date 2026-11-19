@@ -1,0 +1,491 @@
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SecDevOps Audit Platform - Project Governance</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Public+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline": "#757c7d",
+            "surface-bright": "#f9f9f9",
+            "secondary-fixed": "#e2e2e3",
+            "tertiary": "#006d4a",
+            "on-surface": "#2d3435",
+            "on-error": "#fff7f7",
+            "on-secondary-container": "#505253",
+            "on-primary-fixed-variant": "#5c5b5e",
+            "on-surface-variant": "#596061",
+            "on-secondary-fixed": "#3e4041",
+            "background": "#f9f9f9",
+            "on-error-container": "#782232",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#e6ffee",
+            "on-secondary": "#f9f9fa",
+            "on-primary-container": "#525155",
+            "primary-fixed-dim": "#d6d3d7",
+            "secondary": "#5e5f60",
+            "tertiary-fixed-dim": "#58e7ab",
+            "surface-container-highest": "#dde4e5",
+            "on-primary": "#faf7fb",
+            "secondary-fixed-dim": "#d4d4d5",
+            "outline-variant": "#acb3b4",
+            "primary-container": "#e4e1e6",
+            "secondary-dim": "#525354",
+            "primary-dim": "#535255",
+            "surface": "#f9f9f9",
+            "inverse-primary": "#f9f5fa",
+            "tertiary-container": "#69f6b8",
+            "inverse-on-surface": "#9c9d9d",
+            "surface-tint": "#5f5e61",
+            "surface-dim": "#d3dbdd",
+            "tertiary-fixed": "#69f6b8",
+            "surface-variant": "#dde4e5",
+            "surface-container": "#ebeeef",
+            "on-primary-fixed": "#3f3f42",
+            "on-secondary-fixed-variant": "#5a5c5d",
+            "error-dim": "#4f0116",
+            "tertiary-dim": "#005f40",
+            "on-tertiary-container": "#005a3c",
+            "error-container": "#ff8b9a",
+            "error": "#9e3f4e",
+            "on-tertiary-fixed-variant": "#006544",
+            "secondary-container": "#e2e2e3",
+            "on-tertiary-fixed": "#00452d",
+            "primary-fixed": "#e4e1e6",
+            "on-background": "#2d3435",
+            "inverse-surface": "#0c0f0f",
+            "surface-container-low": "#f2f4f4",
+            "primary": "#5f5e61",
+            "surface-container-high": "#e4e9ea"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Inter"],
+            "display": ["Inter"],
+            "body": ["Inter"],
+            "label": ["Public Sans"]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-background font-body antialiased min-h-screen">
+<aside class="fixed top-0 left-0 h-screen w-64 border-r border-outline-variant bg-surface-container-lowest flex flex-col justify-between z-40">
+<div class="flex flex-col h-full">
+<!-- Brand Header -->
+<div class="p-4 border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="h-9 w-9 rounded-lg bg-inverse-surface text-surface flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-base">shield</span>
+</div>
+<div>
+<h2 class="text-sm font-headline font-bold tracking-tight text-on-surface">SecDevOps Audit</h2>
+<span class="text-[10px] font-mono bg-surface-container px-1.5 py-0.5 rounded text-on-surface-variant">Enterprise Tier</span>
+</div>
+</div>
+</div>
+<!-- Workspace Selector Button -->
+<div class="p-3 border-b border-outline-variant">
+<button class="w-full px-3 py-2 bg-surface-container-low hover:bg-surface-container border border-outline-variant rounded-lg flex items-center justify-between text-left transition-all">
+<div>
+<div class="text-xs font-semibold text-on-surface">FinTech Core Corp</div>
+<div class="text-[10px] text-on-surface-variant">5 Repositories Active</div>
+</div>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">unfold_more</span>
+</button>
+</div>
+<!-- Canonical 6-item Navigation Rail -->
+<nav class="flex-grow p-3 space-y-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+        Org Overview
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label font-semibold bg-surface-container-high text-on-surface rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">folder</span>
+        Projects
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">pending_actions</span>
+        Review Queue
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">traffic</span>
+        Release Readiness
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">policy</span>
+        Policy & Exceptions
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-xs font-label text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">download</span>
+        Audit Export
+      </a>
+</nav>
+<!-- Bottom Rail -->
+<div class="p-4 border-t border-outline-variant space-y-3">
+<button class="w-full px-3 py-2 bg-primary text-on-primary rounded-lg text-xs font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+        Generate Report
+      </button>
+<div class="flex items-center justify-between text-[11px] text-on-surface-variant px-1">
+<a class="hover:underline" href="#">Documentation</a>
+<span>•</span>
+<a class="hover:underline" href="#">Support</a>
+</div>
+<div class="pt-2 border-t border-outline-variant/50 flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-surface-container-high flex items-center justify-center font-bold text-xs text-on-surface border border-outline-variant">
+          AV
+        </div>
+<div class="overflow-hidden">
+<div class="text-xs font-semibold text-on-surface truncate">Alex Vance</div>
+<div class="text-[10px] text-on-surface-variant truncate">SecOps Lead</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<div class="ml-64 flex flex-col min-h-screen">
+<header class="bg-surface border-b border-outline-variant sticky top-0 z-30">
+<div class="flex justify-between items-center w-full px-6 py-3 max-w-7xl mx-auto">
+<div class="flex items-center space-x-6">
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-2 text-sm text-outline">search</span>
+<input class="w-full pl-9 pr-12 py-1.5 text-xs bg-surface-container-low border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search findings, CVEs, services..." type="text"/>
+<span class="absolute right-2.5 top-2 text-[10px] font-mono bg-surface border border-outline-variant px-1.5 py-0.2 rounded text-on-surface-variant">⌘K</span>
+</div>
+<nav class="hidden lg:flex items-center space-x-2 text-xs">
+<a class="text-on-surface-variant hover:text-on-surface font-semibold" href="#">FinTech Core Corp</a>
+<span class="text-on-surface-variant">/</span>
+<a class="text-on-surface-variant hover:text-on-surface" href="#">Projects</a>
+<span class="text-on-surface-variant">/</span>
+<span class="text-on-surface font-medium">org/payment-service</span>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant border-r border-outline-variant pr-4">
+<span>Show Rejected Findings</span>
+<button class="w-8 h-4 bg-surface-container border border-outline-variant rounded-full relative transition-colors focus:outline-none">
+<span class="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full transition-transform"></span>
+</button>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors relative">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high flex items-center justify-center font-bold text-xs text-on-surface border border-outline-variant">
+          AV
+        </div>
+</div>
+</div>
+</header>
+<main class="flex-grow max-w-7xl w-full mx-auto px-6 py-8 space-y-8">
+<!-- Breadcrumb / Context Bar -->
+<div class="flex items-center text-xs text-on-surface-variant gap-2">
+<span>Repositories</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-medium">org/payment-service</span>
+</div>
+<!-- Header Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3 flex-wrap">
+<h1 class="text-xl md:text-2xl font-bold text-on-surface">org/payment-service</h1>
+<span class="bg-surface-container px-2.5 py-1 rounded-md text-xs font-mono text-on-surface-variant border border-outline-variant flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              main · 7f9a12c
+            </span>
+<span class="bg-primary-container/50 text-on-primary-container px-2.5 py-1 rounded-md text-xs font-medium">
+              Core FinTech
+            </span>
+</div>
+<p class="text-sm text-on-surface-variant">Core transactional microservice managing payment routing, PCI-DSS boundaries, and ledger synchronization.</p>
+</div>
+<div class="relative">
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:opacity-90 flex items-center gap-2 transition-all" id="triggerDropdownBtn">
+<span>Trigger New Audit</span>
+<span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+</button>
+<div class="hidden absolute right-0 mt-2 w-48 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg py-1 z-50" id="triggerDropdownMenu">
+<a class="block px-4 py-2 text-xs text-on-surface hover:bg-surface-container transition-colors" href="#">Full Audit</a>
+<a class="block px-4 py-2 text-xs text-on-surface hover:bg-surface-container transition-colors" href="#">Incremental</a>
+<a class="block px-4 py-2 text-xs text-on-surface hover:bg-surface-container transition-colors" href="#">Focused Target</a>
+</div>
+</div>
+</div>
+<!-- Status Callout Banner -->
+<div class="border-l-4 border-red-500 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200 p-4 rounded-r-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-red-500 mt-0.5" data-icon="error" style="font-variation-settings: 'FILL' 1;">error</span>
+<div>
+<div class="font-bold text-sm tracking-wide">Release Gate Status: BLOCKED</div>
+<div class="text-xs mt-0.5 text-red-800 dark:text-red-300">Blocked by 2 Confirmed Critical findings under strict policy mode (Enforce)</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="bg-white/80 dark:bg-black/40 px-3 py-1 rounded-full text-xs font-medium border border-red-200 dark:border-red-900">
+            Active Exceptions: 0
+          </span>
+<button class="text-xs font-semibold underline hover:opacity-80">Review Blockers</button>
+</div>
+</div>
+<!-- Metric Bar (3 cards in a grid) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Coverage Ledger -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm flex flex-col justify-between gap-4">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-xs text-on-surface-variant font-medium">Coverage Ledger</div>
+<div class="text-2xl font-bold text-on-surface mt-1">88.8% <span class="text-xs font-normal text-on-surface-variant">audited</span></div>
+</div>
+<div class="p-2 rounded-lg bg-surface-container text-primary">
+<span class="material-symbols-outlined" data-icon="donut_large">donut_large</span>
+</div>
+</div>
+<div class="text-xs text-on-surface-variant border-t border-outline-variant/50 pt-3 flex justify-between items-center">
+<span>142 of 160 code units analyzed</span>
+<span class="text-amber-600 font-medium">18 gaps pending</span>
+</div>
+</div>
+<!-- Token & Model Budget -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm flex flex-col justify-between gap-4">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-xs text-on-surface-variant font-medium">Token &amp; Model Budget</div>
+<div class="text-2xl font-bold text-on-surface mt-1">$142.50 <span class="text-xs font-normal text-on-surface-variant">/ $250.00</span></div>
+</div>
+<div class="p-2 rounded-lg bg-surface-container text-primary">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 border-t border-outline-variant/50 pt-3">
+<div class="flex justify-between text-xs text-on-surface-variant">
+<span>Monthly cap utilization</span>
+<span class="font-medium text-on-surface">57%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 57%;"></div>
+</div>
+</div>
+</div>
+<!-- Active Findings -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm flex flex-col justify-between gap-4">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-xs text-on-surface-variant font-medium">Active Findings</div>
+<div class="text-2xl font-bold text-on-surface mt-1">12 <span class="text-xs font-normal text-on-surface-variant">total</span></div>
+</div>
+<div class="p-2 rounded-lg bg-red-50 text-red-600">
+<span class="material-symbols-outlined" data-icon="security_update_warning">security_update_warning</span>
+</div>
+</div>
+<div class="flex items-center gap-2 border-t border-outline-variant/50 pt-3 text-xs">
+<span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-medium">2 Critical</span>
+<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-medium">4 High</span>
+<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">6 Medium</span>
+</div>
+</div>
+</div>
+<!-- Run History Table Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col">
+<div class="p-5 border-b border-outline-variant flex justify-between items-center">
+<div>
+<h2 class="font-bold text-base text-on-surface">Run History Ledger</h2>
+<p class="text-xs text-on-surface-variant mt-0.5">Recent automated audit executions and pipeline verification states</p>
+</div>
+<button class="text-xs font-semibold text-primary hover:underline">View All Runs</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="bg-surface-container/50 text-on-surface-variant border-b border-outline-variant font-semibold">
+<th class="p-3.5 pl-5">Run ID</th>
+<th class="p-3.5">Audit Mode</th>
+<th class="p-3.5">Commit SHA</th>
+<th class="p-3.5">Phase Progress</th>
+<th class="p-3.5">Duration</th>
+<th class="p-3.5">Cost</th>
+<th class="p-3.5">Validators</th>
+<th class="p-3.5 pr-5 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/50 text-on-surface">
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5 font-mono font-semibold text-primary">#run-9821</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-medium">Full</span></td>
+<td class="p-3.5 font-mono text-on-surface-variant">7f9a12c</td>
+<td class="p-3.5">
+<div class="flex items-center gap-1.5 text-emerald-600">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-on-surface text-[11px]">Completed</span>
+</div>
+</td>
+<td class="p-3.5 text-on-surface-variant">3m 42s</td>
+<td class="p-3.5 font-mono">$4.82</td>
+<td class="p-3.5"><span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium">Passed</span></td>
+<td class="p-3.5 pr-5 text-right">
+<a class="p-1 rounded hover:bg-surface-container inline-flex items-center text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-base" data-icon="chevron_right">chevron_right</span>
+</a>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5 font-mono font-semibold text-primary">#run-9820</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-medium">Incremental</span></td>
+<td class="p-3.5 font-mono text-on-surface-variant">3b4e891</td>
+<td class="p-3.5">
+<div class="flex items-center gap-1.5 text-emerald-600">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-on-surface text-[11px]">Completed</span>
+</div>
+</td>
+<td class="p-3.5 text-on-surface-variant">1m 15s</td>
+<td class="p-3.5 font-mono">$1.40</td>
+<td class="p-3.5"><span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium">Passed</span></td>
+<td class="p-3.5 pr-5 text-right">
+<a class="p-1 rounded hover:bg-surface-container inline-flex items-center text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-base" data-icon="chevron_right">chevron_right</span>
+</a>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5 font-mono font-semibold text-primary">#run-9819</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-medium">Full</span></td>
+<td class="p-3.5 font-mono text-on-surface-variant">1a2b3c4</td>
+<td class="p-3.5">
+<div class="flex items-center gap-1.5 text-red-600">
+<span class="w-2 h-2 rounded-full bg-red-500"></span>
+<span class="text-on-surface text-[11px]">Gate Failed</span>
+</div>
+</td>
+<td class="p-3.5 text-on-surface-variant">4m 02s</td>
+<td class="p-3.5 font-mono">$5.10</td>
+<td class="p-3.5"><span class="text-red-700 bg-red-50 px-2 py-0.5 rounded font-medium">Failed</span></td>
+<td class="p-3.5 pr-5 text-right">
+<a class="p-1 rounded hover:bg-surface-container inline-flex items-center text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-base" data-icon="chevron_right">chevron_right</span>
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Filterable Findings Ledger -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col mb-12">
+<div class="p-5 border-b border-outline-variant flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<h2 class="font-bold text-base text-on-surface">Vulnerability Findings Ledger</h2>
+<p class="text-xs text-on-surface-variant mt-0.5">Active security disclosures and policy violations identified in payment-service</p>
+</div>
+<div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+<div class="relative flex-1 md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-sm text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full bg-surface-container pl-9 pr-4 py-1.5 rounded-lg text-xs border border-outline-variant focus:outline-none focus:border-primary text-on-surface" placeholder="Search vulnerabilities..." type="text"/>
+</div>
+<div class="flex items-center gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant text-xs">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest font-medium shadow-sm text-on-surface">All</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface">Critical</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface">High</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface">Medium</button>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="bg-surface-container/50 text-on-surface-variant border-b border-outline-variant font-semibold">
+<th class="p-3.5 pl-5">Severity</th>
+<th class="p-3.5">Finding ID</th>
+<th class="p-3.5">Description</th>
+<th class="p-3.5">File / Target</th>
+<th class="p-3.5">Category</th>
+<th class="p-3.5 pr-5 text-right">Triage Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/50 text-on-surface">
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5">
+<span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold text-[10px]">CRITICAL</span>
+</td>
+<td class="p-3.5 font-mono font-semibold text-primary">SEC-2023-891</td>
+<td class="p-3.5 font-medium">Unvalidated OAuth token signature verification in webhook handler</td>
+<td class="p-3.5 font-mono text-on-surface-variant">src/auth/webhook.go:142</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px]">Crypto Failure</span></td>
+<td class="p-3.5 pr-5 text-right">
+<span class="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded font-medium text-[11px]">Open / Blocked</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5">
+<span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold text-[10px]">CRITICAL</span>
+</td>
+<td class="p-3.5 font-mono font-semibold text-primary">SEC-2023-884</td>
+<td class="p-3.5 font-medium">Hardcoded service account credential in integration test fixture</td>
+<td class="p-3.5 font-mono text-on-surface-variant">test/fixtures/pay_mock.json:28</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px]">Secret Leak</span></td>
+<td class="p-3.5 pr-5 text-right">
+<span class="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded font-medium text-[11px]">Open / Blocked</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5">
+<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold text-[10px]">HIGH</span>
+</td>
+<td class="p-3.5 font-mono font-semibold text-primary">SEC-2023-870</td>
+<td class="p-3.5 font-medium">SQL injection vector via unescaped query parameter in ledger reporting</td>
+<td class="p-3.5 font-mono text-on-surface-variant">src/ledger/query.go:88</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px]">Injection</span></td>
+<td class="p-3.5 pr-5 text-right">
+<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded font-medium text-[11px]">In Review</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="p-3.5 pl-5">
+<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">MEDIUM</span>
+</td>
+<td class="p-3.5 font-mono font-semibold text-primary">SEC-2023-855</td>
+<td class="p-3.5 font-medium">Outdated cryptographic library version with known moderate CVE</td>
+<td class="p-3.5 font-mono text-on-surface-variant">go.mod:34</td>
+<td class="p-3.5"><span class="bg-surface-container px-2 py-0.5 rounded text-[11px]">Dependency</span></td>
+<td class="p-3.5 pr-5 text-right">
+<span class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded font-medium text-[11px]">Acknowledged</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+
+
+<script>
+    // Simple interactivity for dropdown
+    const btn = document.getElementById('triggerDropdownBtn');
+    const menu = document.getElementById('triggerDropdownMenu');
+    
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.toggle('hidden');
+    });
+
+    window.addEventListener('click', () => {
+      if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+      }
+    });
+  </script>
+
+</body></html>

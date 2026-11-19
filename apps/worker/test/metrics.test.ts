@@ -12,8 +12,6 @@ const NAMES = [
   "sdap_tokens_total",
   "sdap_cost_usd_total",
   "sdap_slice_attempts_total",
-  "sdap_jev_decisions_total",
-  "sdap_jev_precision",
 ];
 
 describe("worker createMetrics", () => {
@@ -34,8 +32,6 @@ describe("worker createMetrics", () => {
     m.tokensTotal.inc(labels, 10);
     m.costUsdTotal.inc(labels, 0.01);
     m.sliceAttemptsTotal.inc({ phase: "hunt", adapter: "mock", model: "m", outcome: "success" });
-    m.jevDecisionsTotal.inc({ key: "candidate.likely_fp", outcome: "keep" });
-    m.jevPrecision.set({ key: "candidate.likely_fp" }, 0.5);
     const text = await m.registry.metrics();
     for (const name of NAMES) expect(text).toContain(name);
     expect(text).toContain(

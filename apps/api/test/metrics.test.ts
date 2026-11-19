@@ -13,8 +13,6 @@ const EXPECTED: Record<string, readonly string[]> = {
   sdap_tokens_total: ["phase", "adapter", "model", "direction"],
   sdap_cost_usd_total: ["phase", "adapter", "model", "direction"],
   sdap_slice_attempts_total: ["phase", "adapter", "model", "outcome"],
-  sdap_jev_decisions_total: ["key", "outcome"],
-  sdap_jev_precision: ["key"],
 };
 
 describe("api createMetrics", () => {
@@ -44,8 +42,6 @@ describe("api createMetrics", () => {
       model: "mock-1",
       outcome: "fallback",
     });
-    m.jevDecisionsTotal.inc({ key: "change.touches_authz", outcome: "escalate" });
-    m.jevPrecision.set({ key: "change.touches_authz" }, 0.8);
 
     const text = await m.registry.metrics();
     for (const name of Object.keys(EXPECTED)) expect(text).toContain(name);

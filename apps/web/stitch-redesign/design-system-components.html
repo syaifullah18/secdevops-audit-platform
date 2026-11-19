@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SecDevOps Audit Platform - Design System &amp; Component Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-tertiary-fixed": "#00452d",
+            "on-background": "#2d3435",
+            "surface": "#ffffff",
+            "on-secondary": "#f9f9fa",
+            "surface-container-high": "#e4e9ea",
+            "on-error": "#fff7f7",
+            "primary-dim": "#535255",
+            "inverse-on-surface": "#9c9d9d",
+            "tertiary-fixed": "#69f6b8",
+            "surface-bright": "#ffffff",
+            "on-secondary-fixed-variant": "#5a5c5d",
+            "on-secondary-container": "#505253",
+            "outline": "#757c7d",
+            "primary-fixed": "#e4e1e6",
+            "inverse-primary": "#f9f5fa",
+            "surface-variant": "#f4f4f5",
+            "secondary-fixed": "#e2e2e3",
+            "surface-container-lowest": "#ffffff",
+            "outline-variant": "#e4e4e7",
+            "surface-tint": "#5f5e61",
+            "error-dim": "#4f0116",
+            "on-primary-container": "#525155",
+            "inverse-surface": "#09090b",
+            "error-container": "#ff8b9a",
+            "secondary-container": "#e2e2e3",
+            "tertiary-dim": "#005f40",
+            "on-error-container": "#782232",
+            "primary-container": "#e4e1e6",
+            "tertiary": "#006d4a",
+            "on-surface": "#09090b",
+            "tertiary-fixed-dim": "#58e7ab",
+            "surface-dim": "#d3dbdd",
+            "primary": "#18181b",
+            "secondary": "#5e5f60",
+            "background": "#ffffff",
+            "surface-container": "#f4f4f5",
+            "secondary-dim": "#525354",
+            "on-primary": "#faf7fb",
+            "on-secondary-fixed": "#3e4041",
+            "tertiary-container": "#69f6b8",
+            "on-tertiary-container": "#005a3c",
+            "error": "#ef4444",
+            "surface-container-highest": "#dde4e5",
+            "primary-fixed-dim": "#d6d3d7",
+            "surface-container-low": "#fafafa",
+            "on-tertiary": "#e6ffee",
+            "on-surface-variant": "#71717a",
+            "on-tertiary-fixed-variant": "#006544",
+            "secondary-fixed-dim": "#d4d4d5",
+            "on-primary-fixed-variant": "#5c5b5e",
+            "on-primary-fixed": "#3f3f42"
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            full: "9999px"
+          },
+          fontFamily: {
+            headline: ["Inter", "sans-serif"],
+            display: ["Inter", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+            label: ["Public Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-background text-on-background font-body antialiased selection:bg-primary selection:text-on-primary transition-colors duration-200">
+<!-- TopAppBar Component -->
+<header class="sticky top-0 w-full z-50 bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center w-full px-4 md:px-8 h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary text-2xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+<div class="flex items-center gap-2">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-inverse-primary">SecDevOps Audit</span>
+<span class="hidden md:inline text-on-surface-variant dark:text-surface-variant">/</span>
+<span class="hidden md:inline text-sm font-medium text-on-surface-variant dark:text-surface-variant">Design System &amp; Guidelines</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="hidden lg:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container dark:bg-zinc-800 text-xs text-on-surface dark:text-zinc-200 pl-9 pr-12 py-1.5 rounded-lg border border-outline-variant dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-primary w-64" placeholder="Search tokens, components... (Cmd+K)" type="text"/>
+<span class="absolute right-2.5 text-[10px] font-mono bg-surface dark:bg-zinc-900 border border-outline-variant dark:border-zinc-700 px-1.5 py-0.5 rounded text-on-surface-variant">⌘K</span>
+</div>
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-surface-container dark:bg-zinc-800 text-on-surface dark:text-zinc-200 border border-outline-variant dark:border-zinc-700">
+          v1.2.0 shadcn/ui Zinc
+        </span>
+<button aria-label="Toggle theme" class="p-2 rounded-lg text-on-surface-variant dark:text-zinc-300 hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" id="theme-toggle">
+<span class="material-symbols-outlined dark:hidden">dark_mode</span>
+<span class="material-symbols-outlined hidden dark:block">light_mode</span>
+</button>
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary dark:bg-zinc-100 text-on-primary dark:text-zinc-900 text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity" onclick="alert('Design tokens exported successfully as JSON.')">
+<span class="material-symbols-outlined text-sm">download</span>
+          Export Tokens
+        </button>
+</div>
+</div>
+</header>
+<div class="flex min-h-[calc(100vh-4rem)]">
+<!-- SideNavBar Component -->
+<aside class="hidden md:flex flex-col justify-between p-4 w-64 h-[calc(100vh-4rem)] sticky top-16 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant dark:border-outline">
+<div class="space-y-6">
+<div>
+<div class="px-3 mb-2 text-[11px] font-mono uppercase tracking-wider text-on-surface-variant dark:text-zinc-400">Foundations</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-primary dark:text-inverse-primary font-bold bg-primary-container dark:bg-zinc-800 rounded-lg text-sm transition-all duration-200" href="#tokens">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+              Overview
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-zinc-400 hover:bg-surface-variant dark:hover:bg-zinc-800 hover:text-on-surface dark:hover:text-zinc-200 rounded-lg text-sm transition-all duration-200" href="#foundations">
+<span class="material-symbols-outlined text-lg">palette</span>
+              Foundations
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-zinc-400 hover:bg-surface-variant dark:hover:bg-zinc-800 hover:text-on-surface dark:hover:text-zinc-200 rounded-lg text-sm transition-all duration-200" href="#components">
+<span class="material-symbols-outlined text-lg">widgets</span>
+              Components
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-zinc-400 hover:bg-surface-variant dark:hover:bg-zinc-800 hover:text-on-surface dark:hover:text-zinc-200 rounded-lg text-sm transition-all duration-200" href="#governance">
+<span class="material-symbols-outlined text-lg">history</span>
+              Audit Logs
+            </a>
+</nav>
+</div>
+<div>
+<div class="px-3 mb-2 text-[11px] font-mono uppercase tracking-wider text-on-surface-variant dark:text-zinc-400">Primitives Quick Index</div>
+<div class="space-y-1 text-xs font-medium text-on-surface-variant">
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#btn-matrix">Button Matrix</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#badges">Badges &amp; Severity</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#cards">Card Primitives</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#forms">Form Controls</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#tables">Data Tables</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#alerts">Alert Banners</a>
+<a class="block px-3 py-1.5 rounded hover:bg-surface-variant dark:hover:bg-zinc-800 transition-colors" href="#modals">Dialog Preview</a>
+</div>
+</div>
+</div>
+<div class="p-3 bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-xs font-semibold text-on-surface dark:text-zinc-200">System 2 Invariant</span>
+</div>
+<p class="text-[11px] text-on-surface-variant dark:text-zinc-400">Strict token synchronization active across all micro-frontends.</p>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 p-6 md:p-10 max-w-7xl mx-auto space-y-12">
+<!-- Intro Section -->
+<section class="space-y-4" id="tokens">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container dark:bg-zinc-800 text-xs font-medium text-on-surface dark:text-zinc-200 border border-outline-variant dark:border-zinc-700">
+<span class="material-symbols-outlined text-sm text-primary dark:text-zinc-300">verified</span>
+          Living Design System &amp; Component Library
+        </div>
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface dark:text-zinc-100 font-headline">SecDevOps Audit Platform Guidelines</h1>
+<p class="text-on-surface-variant dark:text-zinc-400 max-w-3xl text-sm md:text-base">
+          A robust, ultra-clean modular architecture combining shadcn/ui principles with rigid security telemetry requirements. Designed for high-frequency audit operations, strict contrast compliance, and instant visual verification.
+        </p>
+</section>
+<!-- 1. DESIGN TOKENS & PALETTE SECTION -->
+<section class="space-y-6" id="foundations">
+<div class="border-b border-outline-variant dark:border-zinc-800 pb-3">
+<h2 class="text-xl font-bold text-on-surface dark:text-zinc-100">1. Design Tokens &amp; Color Palette</h2>
+<p class="text-xs text-on-surface-variant dark:text-zinc-400">Primary neutrals and semantic severity color spectrum with high-contrast variants.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Neutral Token Card -->
+<div class="bg-surface dark:bg-zinc-900 p-5 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold text-on-surface dark:text-zinc-200">Primary Neutrals</span>
+<span class="text-[10px] font-mono text-on-surface-variant">#FFFFFF / #09090B</span>
+</div>
+<div class="grid grid-cols-5 gap-2">
+<div class="h-10 bg-white border border-outline-variant rounded flex items-center justify-center text-[10px] font-mono text-zinc-900">bg</div>
+<div class="h-10 bg-zinc-100 rounded flex items-center justify-center text-[10px] font-mono text-zinc-800">100</div>
+<div class="h-10 bg-zinc-200 rounded flex items-center justify-center text-[10px] font-mono text-zinc-800">200</div>
+<div class="h-10 bg-zinc-800 rounded flex items-center justify-center text-[10px] font-mono text-zinc-100">800</div>
+<div class="h-10 bg-zinc-950 rounded flex items-center justify-center text-[10px] font-mono text-zinc-100">950</div>
+</div>
+<p class="text-xs text-on-surface-variant">Pure white primary canvas with deep zinc contrast layers for maximum legibility in high-density audit views.</p>
+</div>
+<!-- Severity Spectrum Card -->
+<div class="bg-surface dark:bg-zinc-900 p-5 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold text-on-surface dark:text-zinc-200">Severity Spectrum</span>
+<span class="text-[10px] font-mono text-on-surface-variant">5 Tiers</span>
+</div>
+<div class="space-y-1.5">
+<div class="flex items-center justify-between px-2.5 py-1 bg-[#FEF2F2] border border-[#FECACA] rounded text-[#991B1B] text-xs font-mono font-medium">
+<span>CRITICAL</span>
+<span>#EF4444</span>
+</div>
+<div class="flex items-center justify-between px-2.5 py-1 bg-[#FFF7ED] border border-[#FED7AA] rounded text-[#9A3412] text-xs font-mono font-medium">
+<span>HIGH</span>
+<span>#F97316</span>
+</div>
+<div class="flex items-center justify-between px-2.5 py-1 bg-[#FEFCE8] border border-[#FEF08A] rounded text-[#854D0E] text-xs font-mono font-medium">
+<span>MEDIUM</span>
+<span>#F59E0B</span>
+</div>
+<div class="flex items-center justify-between px-2.5 py-1 bg-[#F0F9FF] border border-[#BAE6FD] rounded text-[#075985] text-xs font-mono font-medium">
+<span>LOW / INFO</span>
+<span>#0284C7</span>
+</div>
+</div>
+</div>
+<!-- System Invariants Card -->
+<div class="bg-surface dark:bg-zinc-900 p-5 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold text-on-surface dark:text-zinc-200">Governance Signals</span>
+<span class="text-[10px] font-mono text-on-surface-variant">System 1 vs 2</span>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between p-2 rounded bg-surface-container dark:bg-zinc-800">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-xs font-medium text-on-surface dark:text-zinc-200">System 2 Confirmed</span>
+</div>
+<span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">#10B981</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container dark:bg-zinc-800">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+<span class="text-xs font-medium text-on-surface dark:text-zinc-200">System 1 Advisory</span>
+</div>
+<span class="text-[11px] font-mono text-purple-600 dark:text-purple-400">#7C3AED</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant">Automated AI advisory vs deterministic engine validations.</p>
+</div>
+</div>
+</section>
+<!-- 2. TYPOGRAPHY MATRIX -->
+<section class="space-y-6">
+<div class="border-b border-outline-variant dark:border-zinc-800 pb-3">
+<h2 class="text-xl font-bold text-on-surface dark:text-zinc-100">2. Typography Matrix</h2>
+<p class="text-xs text-on-surface-variant dark:text-zinc-400">Inter font scale for document hierarchy and JetBrains Mono for security telemetry.</p>
+</div>
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead>
+<tr class="border-b border-outline-variant dark:border-zinc-800 text-xs font-mono text-on-surface-variant">
+<th class="pb-3 font-semibold">Role / Style</th>
+<th class="pb-3 font-semibold">Font Family</th>
+<th class="pb-3 font-semibold">Weight / Size</th>
+<th class="pb-3 font-semibold">Live Preview</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant dark:divide-zinc-800 text-on-surface dark:text-zinc-200">
+<tr>
+<td class="py-3 font-medium text-xs">Heading 1</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Inter</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Bold / 30px</td>
+<td class="py-3 text-2xl font-bold tracking-tight">Security Audit Dashboard</td>
+</tr>
+<tr>
+<td class="py-3 font-medium text-xs">Heading 2</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Inter</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Bold / 20px</td>
+<td class="py-3 text-lg font-bold">Vulnerability Breakdown</td>
+</tr>
+<tr>
+<td class="py-3 font-medium text-xs">Body Text</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Inter</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Regular / 14px</td>
+<td class="py-3 text-sm text-on-surface-variant">Analyzing dependencies for zero-day exploits and CVE vectors.</td>
+</tr>
+<tr>
+<td class="py-3 font-medium text-xs">Telemetry / Code</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">JetBrains Mono</td>
+<td class="py-3 font-mono text-xs text-on-surface-variant">Medium / 12px</td>
+<td class="py-3 font-mono text-xs bg-surface-container dark:bg-zinc-800 p-1.5 rounded inline-block text-primary dark:text-zinc-300">CVE-2024-38816 • sha256:9f86d08...</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- 3. MODULAR COMPONENTS SHOWCASE -->
+<section class="space-y-8" id="components">
+<div class="border-b border-outline-variant dark:border-zinc-800 pb-3">
+<h2 class="text-xl font-bold text-on-surface dark:text-zinc-100">3. Modular Components Showcase</h2>
+<p class="text-xs text-on-surface-variant dark:text-zinc-400">Interactive shadcn/ui primitives configured for secure audit workflows.</p>
+</div>
+<!-- Button Component Matrix -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 space-y-4" id="btn-matrix">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Button Component Matrix</h3>
+<span class="text-xs font-mono text-on-surface-variant">6 variants × 4 sizes</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Default -->
+<div class="p-4 bg-surface-container-low dark:bg-zinc-800/50 rounded-lg space-y-3">
+<span class="text-xs font-mono font-medium text-on-surface-variant">Default (Primary)</span>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-2.5 py-1 bg-primary text-on-primary rounded text-xs font-medium hover:opacity-90 active:scale-98 transition-all">Small</button>
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:opacity-90 active:scale-98 transition-all">Default</button>
+<button class="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-base font-medium hover:opacity-90 active:scale-98 transition-all">Large</button>
+<button class="p-2 bg-primary text-on-primary rounded-lg hover:opacity-90"><span class="material-symbols-outlined text-sm">add</span></button>
+</div>
+</div>
+<!-- Secondary -->
+<div class="p-4 bg-surface-container-low dark:bg-zinc-800/50 rounded-lg space-y-3">
+<span class="text-xs font-mono font-medium text-on-surface-variant">Secondary</span>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-2.5 py-1 bg-surface-container dark:bg-zinc-700 text-on-surface dark:text-zinc-200 rounded text-xs font-medium hover:bg-surface-variant transition-all">Small</button>
+<button class="px-4 py-2 bg-surface-container dark:bg-zinc-700 text-on-surface dark:text-zinc-200 rounded-lg text-sm font-medium hover:bg-surface-variant transition-all">Default</button>
+<button class="px-5 py-2.5 bg-surface-container dark:bg-zinc-700 text-on-surface dark:text-zinc-200 rounded-lg text-base font-medium hover:bg-surface-variant transition-all">Large</button>
+<button class="p-2 bg-surface-container dark:bg-zinc-700 text-on-surface dark:text-zinc-200 rounded-lg hover:bg-surface-variant"><span class="material-symbols-outlined text-sm">settings</span></button>
+</div>
+</div>
+<!-- Destructive -->
+<div class="p-4 bg-surface-container-low dark:bg-zinc-800/50 rounded-lg space-y-3">
+<span class="text-xs font-mono font-medium text-on-surface-variant">Destructive / Critical</span>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-2.5 py-1 bg-error text-white rounded text-xs font-medium hover:opacity-90 transition-all">Revoke</button>
+<button class="px-4 py-2 bg-error text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all">Purge Keys</button>
+<button class="p-2 bg-error text-white rounded-lg hover:opacity-90"><span class="material-symbols-outlined text-sm">delete</span></button>
+</div>
+</div>
+<!-- Outline -->
+<div class="p-4 bg-surface-container-low dark:bg-zinc-800/50 rounded-lg space-y-3">
+<span class="text-xs font-mono font-medium text-on-surface-variant">Outline</span>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-4 py-2 border border-outline-variant dark:border-zinc-700 text-on-surface dark:text-zinc-200 rounded-lg text-sm font-medium hover:bg-surface-variant dark:hover:bg-zinc-700 transition-all">Configure Rule</button>
+<button class="p-2 border border-outline-variant dark:border-zinc-700 text-on-surface dark:text-zinc-200 rounded-lg hover:bg-surface-variant dark:hover:bg-zinc-700"><span class="material-symbols-outlined text-sm">filter_list</span></button>
+</div>
+</div>
+<!-- Ghost & Link -->
+<div class="p-4 bg-surface-container-low dark:bg-zinc-800/50 rounded-lg space-y-3 lg:col-span-2">
+<span class="text-xs font-mono font-medium text-on-surface-variant">Ghost &amp; Link Variants</span>
+<div class="flex flex-wrap items-center gap-4">
+<button class="px-4 py-2 text-on-surface dark:text-zinc-200 hover:bg-surface-variant dark:hover:bg-zinc-700 rounded-lg text-sm font-medium transition-all">Ghost Action</button>
+<button class="text-sm font-medium text-primary dark:text-zinc-300 underline hover:opacity-80 transition-opacity">View Full Advisory Documentation →</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Badges & Severity Chips -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 space-y-4" id="badges">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Badges &amp; Severity Chips</h3>
+<span class="text-xs font-mono text-on-surface-variant">Monospace uppercase status indicators</span>
+</div>
+<div class="flex flex-wrap gap-3 items-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]">
+<span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
+              CRITICAL CVE-2024-38816
+            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#FFF7ED] border border-[#FED7AA] text-[#9A3412]">
+<span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+              HIGH RISK
+            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#FEFCE8] border border-[#FEF08A] text-[#854D0E]">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              MEDIUM WARNING
+            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#F0F9FF] border border-[#BAE6FD] text-[#075985]">
+<span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+              LOW INFO
+            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              SYSTEM 2 VERIFIED
+            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#F5F3FF] border border-[#DDD6FE] text-[#5B21B6]">
+<span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+              AI ADVISORY
+            </span>
+</div>
+</div>
+<!-- Card Primitive: Security SLA KPI Widget -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="cards">
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+<div class="p-5 pb-3 space-y-1">
+<span class="text-xs font-mono font-medium text-on-surface-variant">KPI WIDGET 01</span>
+<h4 class="text-base font-bold text-on-surface dark:text-zinc-100">Mean Time to Remediate (MTTR)</h4>
+<p class="text-xs text-on-surface-variant">Average time to close high-severity CVE tickets.</p>
+</div>
+<div class="px-5 py-4 bg-surface-container-low dark:bg-zinc-800/40 border-y border-outline-variant dark:border-zinc-800 flex items-baseline justify-between">
+<span class="text-3xl font-extrabold font-mono text-on-surface dark:text-zinc-100">4.2 hrs</span>
+<span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold">-18% vs last sprint</span>
+</div>
+<div class="p-4 flex items-center justify-between text-xs text-on-surface-variant">
+<span>SLA Target: &lt; 24h</span>
+<span class="font-mono text-emerald-600 dark:text-emerald-400">Compliant</span>
+</div>
+</div>
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+<div class="p-5 pb-3 space-y-1">
+<span class="text-xs font-mono font-medium text-on-surface-variant">KPI WIDGET 02</span>
+<h4 class="text-base font-bold text-on-surface dark:text-zinc-100">Active Vulnerabilities</h4>
+<p class="text-xs text-on-surface-variant">Total unresolved findings across all microservices.</p>
+</div>
+<div class="px-5 py-4 bg-surface-container-low dark:bg-zinc-800/40 border-y border-outline-variant dark:border-zinc-800 flex items-baseline justify-between">
+<span class="text-3xl font-extrabold font-mono text-on-surface dark:text-zinc-100">128</span>
+<span class="text-xs font-mono text-error font-semibold">+3 today</span>
+</div>
+<div class="p-4 flex items-center justify-between text-xs text-on-surface-variant">
+<span>Critical: 2 | High: 14</span>
+<a class="text-primary dark:text-zinc-300 underline" href="#tables">Inspect Table</a>
+</div>
+</div>
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+<div class="p-5 pb-3 space-y-1">
+<span class="text-xs font-mono font-medium text-on-surface-variant">KPI WIDGET 03</span>
+<h4 class="text-base font-bold text-on-surface dark:text-zinc-100">Pipeline Health Score</h4>
+<p class="text-xs text-on-surface-variant">DevSecOps gate pass rate across 45 repositories.</p>
+</div>
+<div class="px-5 py-4 bg-surface-container-low dark:bg-zinc-800/40 border-y border-outline-variant dark:border-zinc-800 flex items-baseline justify-between">
+<span class="text-3xl font-extrabold font-mono text-on-surface dark:text-zinc-100">98.4%</span>
+<span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Stable</span>
+</div>
+<div class="p-4 flex items-center justify-between text-xs text-on-surface-variant">
+<span>System 2 Engine</span>
+<span class="font-mono text-on-surface dark:text-zinc-300">Verified</span>
+</div>
+</div>
+</div>
+<!-- Tabs Primitive -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Segmented Tabs Primitive</h3>
+<span class="text-xs font-mono text-on-surface-variant">Interactive pill tabs</span>
+</div>
+<div class="inline-flex p-1 bg-surface-container dark:bg-zinc-800 rounded-lg gap-1">
+<button class="tab-btn px-4 py-1.5 rounded-md text-xs font-semibold bg-surface dark:bg-zinc-900 text-on-surface dark:text-zinc-100 shadow-sm transition-all" onclick="switchTab(this, 'tab-content-1')">Overview</button>
+<button class="tab-btn px-4 py-1.5 rounded-md text-xs font-medium text-on-surface-variant dark:text-zinc-400 hover:text-on-surface transition-all" onclick="switchTab(this, 'tab-content-2')">Dependencies</button>
+<button class="tab-btn px-4 py-1.5 rounded-md text-xs font-medium text-on-surface-variant dark:text-zinc-400 hover:text-on-surface transition-all" onclick="switchTab(this, 'tab-content-3')">Audit Logs</button>
+</div>
+<div class="tab-pane p-4 bg-surface-container-low dark:bg-zinc-800/40 rounded-lg text-xs text-on-surface-variant dark:text-zinc-300" id="tab-content-1">
+            Displaying primary system metrics and telemetry summaries for active repositories.
+          </div>
+<div class="tab-pane p-4 bg-surface-container-low dark:bg-zinc-800/40 rounded-lg text-xs text-on-surface-variant dark:text-zinc-300 hidden" id="tab-content-2">
+            Dependency graph scanned via Trivy &amp; Snyk integrations. 42 packages analyzed.
+          </div>
+<div class="tab-pane p-4 bg-surface-container-low dark:bg-zinc-800/40 rounded-lg text-xs text-on-surface-variant dark:text-zinc-300 hidden" id="tab-content-3">
+            Immutable audit trail secured with SHA-256 cryptographic signing.
+          </div>
+</div>
+<!-- Form Controls -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 space-y-6" id="forms">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Form Controls &amp; Inputs</h3>
+<span class="text-xs font-mono text-on-surface-variant">shadcn/ui style inputs</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-medium text-on-surface dark:text-zinc-200">Policy Identifier</label>
+<input class="w-full bg-surface-container dark:bg-zinc-800 border border-outline-variant dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary" type="text" value="POL-SEC-2024-09"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-on-surface dark:text-zinc-200">Severity Threshold</label>
+<select class="w-full bg-surface-container dark:bg-zinc-800 border border-outline-variant dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary">
+<option>Critical &amp; High Only</option>
+<option>All Severities (Critical to Low)</option>
+<option>System 2 Verified Only</option>
+</select>
+</div>
+<div class="space-y-2 md:col-span-2 lg:col-span-1">
+<label class="text-xs font-medium text-on-surface dark:text-zinc-200">Exception Justification</label>
+<textarea class="w-full bg-surface-container dark:bg-zinc-800 border border-outline-variant dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Enter rationale for security override..." rows="1"></textarea>
+</div>
+</div>
+<div class="flex flex-wrap gap-6 pt-2 border-t border-outline-variant dark:border-zinc-800 items-center">
+<label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-on-surface dark:text-zinc-200">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+              Enforce Strict TLS 1.3 Validation
+            </label>
+<label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-on-surface dark:text-zinc-200">
+<input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+              Enable AI System 1 Advisory Mode
+            </label>
+</div>
+</div>
+<!-- Data Table Primitive -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 overflow-hidden space-y-0" id="tables">
+<div class="p-6 pb-4 flex justify-between items-center border-b border-outline-variant dark:border-zinc-800">
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Data Table Primitive</h3>
+<p class="text-xs text-on-surface-variant">1px bordered dense telemetry table with 5 sample audit findings.</p>
+</div>
+<span class="text-xs font-mono bg-surface-container dark:bg-zinc-800 px-2.5 py-1 rounded text-on-surface dark:text-zinc-200 border border-outline-variant dark:border-zinc-700">5 records</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs font-mono">
+<thead class="bg-surface-container dark:bg-zinc-800/80 text-on-surface-variant dark:text-zinc-400 border-b border-outline-variant dark:border-zinc-800">
+<tr>
+<th class="p-3 font-semibold">Finding / CVE</th>
+<th class="p-3 font-semibold">Component / Path</th>
+<th class="p-3 font-semibold">CVSS</th>
+<th class="p-3 font-semibold">Severity</th>
+<th class="p-3 font-semibold">SLA Countdown</th>
+<th class="p-3 font-semibold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant dark:divide-zinc-800 text-on-surface dark:text-zinc-200">
+<tr class="hover:bg-surface-container-low dark:hover:bg-zinc-800/50 transition-colors">
+<td class="p-3 font-bold text-error">CVE-2024-38816</td>
+<td class="p-3 text-on-surface-variant dark:text-zinc-400">/src/auth/jwt.go</td>
+<td class="p-3 font-semibold">9.8</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded text-[10px] bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] font-bold">CRITICAL</span>
+</td>
+<td class="p-3 text-error font-semibold">02h 14m left</td>
+<td class="p-3 text-right">
+<button class="px-2 py-1 bg-primary text-on-primary rounded text-[11px] hover:opacity-90">Triage</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low dark:hover:bg-zinc-800/50 transition-colors">
+<td class="p-3 font-bold text-orange-600 dark:text-orange-400">CVE-2024-21538</td>
+<td class="p-3 text-on-surface-variant dark:text-zinc-400">/package.json</td>
+<td class="p-3 font-semibold">8.2</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded text-[10px] bg-[#FFF7ED] text-[#9A3412] border border-[#FED7AA] font-bold">HIGH</span>
+</td>
+<td class="p-3 text-orange-600 dark:text-orange-400">14h 30m left</td>
+<td class="p-3 text-right">
+<button class="px-2 py-1 bg-primary text-on-primary rounded text-[11px] hover:opacity-90">Triage</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low dark:hover:bg-zinc-800/50 transition-colors">
+<td class="p-3 font-bold text-amber-600 dark:text-amber-400">CVE-2023-44487</td>
+<td class="p-3 text-on-surface-variant dark:text-zinc-400">/gateway/envoy.yaml</td>
+<td class="p-3 font-semibold">5.3</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded text-[10px] bg-[#FEFCE8] text-[#854D0E] border border-[#FEF08A] font-bold">MEDIUM</span>
+</td>
+<td class="p-3 text-on-surface-variant">3d 12h left</td>
+<td class="p-3 text-right">
+<button class="px-2 py-1 bg-primary text-on-primary rounded text-[11px] hover:opacity-90">Triage</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low dark:hover:bg-zinc-800/50 transition-colors">
+<td class="p-3 font-bold text-sky-600 dark:text-sky-400">SEC-INFO-992</td>
+<td class="p-3 text-on-surface-variant dark:text-zinc-400">/Dockerfile</td>
+<td class="p-3 font-semibold">2.1</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded text-[10px] bg-[#F0F9FF] text-[#075985] border border-[#BAE6FD] font-bold">LOW</span>
+</td>
+<td class="p-3 text-on-surface-variant">14d left</td>
+<td class="p-3 text-right">
+<button class="px-2 py-1 bg-surface-container text-on-surface dark:bg-zinc-800 dark:text-zinc-200 rounded text-[11px] hover:bg-surface-variant">Review</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low dark:hover:bg-zinc-800/50 transition-colors">
+<td class="p-3 font-bold text-emerald-600 dark:text-emerald-400">SYS2-VERIFIED</td>
+<td class="p-3 text-on-surface-variant dark:text-zinc-400">/crypto/kms.go</td>
+<td class="p-3 font-semibold">0.0</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded text-[10px] bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] font-bold">VERIFIED</span>
+</td>
+<td class="p-3 text-emerald-600 dark:text-emerald-400 font-semibold">Compliant</td>
+<td class="p-3 text-right">
+<button class="px-2 py-1 bg-surface-container text-on-surface dark:bg-zinc-800 dark:text-zinc-200 rounded text-[11px] hover:bg-surface-variant">Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Alert Banners -->
+<div class="space-y-4" id="alerts">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Alert Banners</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Destructive Alert -->
+<div class="p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg flex gap-3 text-[#991B1B]">
+<span class="material-symbols-outlined text-xl flex-shrink-0">error</span>
+<div class="space-y-1">
+<h5 class="text-xs font-bold uppercase tracking-wide">Critical Security Breach Detected</h5>
+<p class="text-xs opacity-90">Unauthorized root access attempt logged from IP 192.168.4.12. Automatic quarantine initiated.</p>
+</div>
+</div>
+<!-- Warning Alert -->
+<div class="p-4 bg-[#FFF7ED] border border-[#FED7AA] rounded-lg flex gap-3 text-[#9A3412]">
+<span class="material-symbols-outlined text-xl flex-shrink-0">warning</span>
+<div class="space-y-1">
+<h5 class="text-xs font-bold uppercase tracking-wide">SLA Expiration Warning</h5>
+<p class="text-xs opacity-90">3 critical CVEs are approaching their 24-hour remediation deadline without assigned patches.</p>
+</div>
+</div>
+<!-- Success Alert -->
+<div class="p-4 bg-[#ECFDF5] border border-[#A7F3D0] rounded-lg flex gap-3 text-[#065F46]">
+<span class="material-symbols-outlined text-xl flex-shrink-0">check_circle</span>
+<div class="space-y-1">
+<h5 class="text-xs font-bold uppercase tracking-wide">System 2 Invariant Verified</h5>
+<p class="text-xs opacity-90">All 45 microservice pipelines successfully passed cryptographic compliance checks.</p>
+</div>
+</div>
+<!-- Advisory Alert -->
+<div class="p-4 bg-[#F5F3FF] border border-[#DDD6FE] rounded-lg flex gap-3 text-[#5B21B6]">
+<span class="material-symbols-outlined text-xl flex-shrink-0">smart_toy</span>
+<div class="space-y-1">
+<h5 class="text-xs font-bold uppercase tracking-wide">System 1 AI Advisory Notice</h5>
+<p class="text-xs opacity-90">Suggested refactoring for /src/auth/jwt.go to prevent potential timing side-channel attacks.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Dialog Modal Component Preview -->
+<div class="bg-surface dark:bg-zinc-900 rounded-lg border border-outline-variant dark:border-zinc-800 p-6 space-y-4" id="modals">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface dark:text-zinc-200">Dialog Modal Component (Live Preview)</h3>
+<span class="text-xs font-mono text-on-surface-variant">Triage Exception Modal</span>
+</div>
+<div class="p-6 bg-surface-container dark:bg-zinc-800/60 rounded-xl border border-outline-variant dark:border-zinc-700 max-w-lg mx-auto space-y-4 shadow-md">
+<div class="flex items-center justify-between border-b border-outline-variant dark:border-zinc-700 pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error">security_update_warning</span>
+<h4 class="text-sm font-bold text-on-surface dark:text-zinc-100">Triage Exception: CVE-2024-38816</h4>
+</div>
+<span class="text-xs font-mono bg-[#FEF2F2] text-[#991B1B] px-2 py-0.5 rounded font-bold">CRITICAL</span>
+</div>
+<div class="space-y-3 text-xs text-on-surface-variant dark:text-zinc-300">
+<p>You are requesting a temporary security exception for a critical vulnerability in <code class="font-mono text-on-surface dark:text-zinc-100 bg-surface dark:bg-zinc-900 px-1 py-0.5 rounded">/src/auth/jwt.go</code>.</p>
+<div class="space-y-1">
+<label class="font-medium text-on-surface dark:text-zinc-200">Select Security Policy</label>
+<select class="w-full bg-surface dark:bg-zinc-900 border border-outline-variant dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-on-surface dark:text-zinc-100">
+<option>POL-EXC-01: Compensating Firewall Rule Active</option>
+<option>POL-EXC-02: Isolated Sandbox Environment</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="font-medium text-on-surface dark:text-zinc-200">Exception Rationale</label>
+<textarea class="w-full bg-surface dark:bg-zinc-900 border border-outline-variant dark:border-zinc-700 rounded p-2 text-xs text-on-surface dark:text-zinc-100" placeholder="Provide cryptographic or architectural justification..." rows="2"></textarea>
+</div>
+</div>
+<div class="flex justify-end gap-2 pt-2 border-t border-outline-variant dark:border-zinc-700">
+<button class="px-3 py-1.5 bg-surface dark:bg-zinc-800 border border-outline-variant dark:border-zinc-700 text-on-surface dark:text-zinc-200 rounded text-xs font-medium hover:bg-surface-variant" onclick="alert('Modal dismissed.')">Cancel</button>
+<button class="px-3 py-1.5 bg-primary text-on-primary rounded text-xs font-semibold hover:opacity-90" onclick="alert('Exception request submitted for CISO approval.')">Submit Exception</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. DESIGN GUIDELINE & GOVERNANCE NOTES -->
+<section class="space-y-6" id="governance">
+<div class="border-b border-outline-variant dark:border-zinc-800 pb-3">
+<h2 class="text-xl font-bold text-on-surface dark:text-zinc-100">4. Design Guideline &amp; Governance Notes</h2>
+<p class="text-xs text-on-surface-variant dark:text-zinc-400">Architecture summary and system invariants.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface dark:bg-zinc-900 p-6 rounded-lg border border-outline-variant dark:border-zinc-800 space-y-3">
+<h3 class="text-sm font-bold text-on-surface dark:text-zinc-100 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary dark:text-zinc-300 text-base">architecture</span>
+              Pure White Default &amp; Strict Token Reuse
+            </h3>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+              The platform adheres to a clean #FFFFFF default canvas in Bright mode to maximize contrast against high-density security tables. All UI primitives must reuse designated Tailwind tokens (`bg-surface`, `text-on-surface`, `border-outline-variant`) rather than arbitrary hex values.
+            </p>
+</div>
+<div class="bg-surface dark:bg-zinc-900 p-6 rounded-lg border border-outline-variant dark:border-zinc-800 space-y-3">
+<h3 class="text-sm font-bold text-on-surface dark:text-zinc-100 flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600 text-base">verified_user</span>
+              System 2 vs System 1 Invariants
+            </h3>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+<strong class="text-on-surface dark:text-zinc-200">System 2 (Deterministic Engines):</strong> Governs cryptographic signatures, exact CVE matching, and mandatory SLA compliance. <br/>
+<strong class="text-on-surface dark:text-zinc-200">System 1 (AI Advisory):</strong> Provides real-time suggestions and heuristic risk scoring flagged with distinctive violet badges.
+            </p>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Interactive Scripts -->
+<script>
+    // Theme Toggle Script
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const htmlElement = document.documentElement;
+
+    themeToggleBtn.addEventListener('click', () => {
+      if (htmlElement.classList.contains('dark')) {
+        htmlElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+
+    // Initialize theme from storage if present
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      htmlElement.classList.add('dark');
+    }
+
+    // Tabs switching logic
+    function switchTab(btn, paneId) {
+      const container = btn.closest('div').parentElement;
+      container.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('bg-surface', 'dark:bg-zinc-900', 'text-on-surface', 'dark:text-zinc-100', 'shadow-sm');
+        b.classList.add('text-on-surface-variant', 'dark:text-zinc-400');
+      });
+      btn.classList.add('bg-surface', 'dark:bg-zinc-900', 'text-on-surface', 'dark:text-zinc-100', 'shadow-sm');
+      btn.classList.remove('text-on-surface-variant', 'dark:text-zinc-400');
+
+      container.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+      document.getElementById(paneId).classList.remove('hidden');
+    }
+  </script>
+</body></html>

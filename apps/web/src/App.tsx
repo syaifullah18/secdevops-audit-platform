@@ -11,7 +11,8 @@ import { PolicyViewScreen } from "./screens/PolicyView.js";
 import { ReleaseReadinessScreen } from "./screens/ReleaseReadiness.js";
 import { AuditExportScreen } from "./screens/AuditExport.js";
 import { StyleguideScreen } from "./screens/Styleguide.js";
-import { RequireSession } from "./auth/RequireSession.js";
+import { HomeGate } from "./auth/HomeGate.js";
+import { LandingScreen } from "./screens/Landing.js";
 import { LoginScreen } from "./screens/Login.js";
 import { ProfileScreen } from "./screens/Profile.js";
 import { AdminScreen } from "./screens/Admin.js";
@@ -28,6 +29,7 @@ export function App() {
     <AppProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/welcome" element={<LandingScreen />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/login/callback" element={<LoginCallbackScreen />} />
           <Route path="/signup" element={<SignupScreen />} />
@@ -37,9 +39,9 @@ export function App() {
           <Route
             path="/"
             element={
-              <RequireSession>
+              <HomeGate>
                 <Layout />
-              </RequireSession>
+              </HomeGate>
             }
           >
             <Route index element={<OrgOverviewScreen />} />

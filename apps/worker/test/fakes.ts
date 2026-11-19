@@ -66,7 +66,8 @@ export class FakeSandboxRunner implements SandboxRunner {
       const timeoutMs = req.policy.timeoutSec ? req.policy.timeoutSec * 1000 : 30000;
 
       const child = spawn(command, args, {
-        cwd: req.cwd || req.policy.targetDir,
+        // Like the real runners, `/target` means the target directory on the host.
+        cwd: !req.cwd || req.cwd === "/target" ? req.policy.targetDir : req.cwd,
         env: {
           ...process.env,
           ...req.policy.env,

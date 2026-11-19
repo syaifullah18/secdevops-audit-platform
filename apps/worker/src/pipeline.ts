@@ -17,6 +17,7 @@ import {
 import type { WorkerConfig } from "./config.js";
 import { EventSequencer } from "./events.js";
 import { createDefaultImportFindings } from "./normalizer-hook.js";
+import { huntPrompt, reconPrompt, validatePrompt, type PromptPaths } from "./prompts.js";
 import { executeSliceWithFallback } from "./router.js";
 import type { ImportFindingsFn, PipelineExecutionOptions } from "./types.js";
 import { ValidationService } from "./validator.js";
@@ -109,6 +110,11 @@ export class AuditPipeline {
     const targetDir = options.targetDir || process.cwd();
     const outputDir = options.outputDir || path.resolve(this.config.outputBaseDir, run.id);
     await fs.mkdir(outputDir, { recursive: true });
+    // The agent sees the real paths when nothing isolates it, and the fixed mount points otherwise.
+    const isolated = this.sandboxRunner.enforcing;
+    const paths: PromptPaths = isolated
+      ? { target: "/target", output: "/out", skill: "/skill" }
+      : { target: targetDir, output: outputDir, skill: this.config.skillPath };
 
     if (await isCancelled?.()) {
       await this.cancelRun(run, sequencer);
@@ -227,8 +233,8 @@ export class AuditPipeline {
         adapterRegistry: this.adapterRegistry,
         sequencer,
         store: this.store,
-        prompt: `Run security-audit reconnaissance phase on target ${targetDir} with output in ${outputDir}.`,
-        metadata: { targetDir, outputDir },
+        prompt: reconPrompt(paths),
+        metadata: { targetDir, outputDir, skillDir: this.config.skillPath },
       });
 
       if (!res.success) {
@@ -281,8 +287,8 @@ export class AuditPipeline {
         adapterRegistry: this.adapterRegistry,
         sequencer,
         store: this.store,
-        prompt: `Run security-audit hunting phase for ${slice.label} on target ${targetDir} with output in ${outputDir}.`,
-        metadata: { targetDir, outputDir },
+        prompt: huntPrompt(paths, slice.label, slice.attackClass),
+        metadata: { targetDir, outputDir, skillDir: this.config.skillPath },
       });
 
       if (!res.success) {
@@ -348,8 +354,8 @@ export class AuditPipeline {
         adapterRegistry: this.adapterRegistry,
         sequencer,
         store: this.store,
-        prompt: `Run security-audit validation phase for ${slice.label} on target ${targetDir} with output in ${outputDir}.`,
-        metadata: { targetDir, outputDir },
+        prompt: validatePrompt(paths),
+        metadata: { targetDir, outputDir, skillDir: this.config.skillPath },
       });
 
       if (!res.success) {

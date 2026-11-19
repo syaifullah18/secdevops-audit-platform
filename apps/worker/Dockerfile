@@ -24,6 +24,11 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /var/lib/sdap/runs \
  && chown node:node /var/lib/sdap/runs
+# The audit agent: runs headless (`claude -p`) with ANTHROPIC_API_KEY. Pin with
+# --build-arg CLAUDE_CODE_VERSION=<version> for reproducible images.
+ARG CLAUDE_CODE_VERSION=latest
+RUN npm install --global @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
+ && npm cache clean --force
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
 COPY --from=build --chown=root:root /repo/vendor/security-audit-skill /opt/security-audit-skill
@@ -32,6 +37,4 @@ VOLUME ["/var/lib/sdap/runs"]
 EXPOSE 9464
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=5 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.SDAP_METRICS_PORT||9464)+'/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
-# TODO(WS1/Phase 2): apps/worker has no process entrypoint yet (src/main.ts). It must build the
-# deps for createAuditWorker, call startMetricsServer(), and handle SIGTERM.
 CMD ["node", "dist/main.js"]

@@ -102,6 +102,7 @@ describe("Audit Worker", () => {
     };
 
     const completed = await workerInstance.processJob(jobData, {
+      targetDir: tmpOut,
       outputDir: tmpOut,
     });
 
@@ -156,6 +157,7 @@ describe("Audit Worker", () => {
 
     // Simulate cancelling after preflight
     const completed = await workerInstance.processJob(jobData, {
+      targetDir: tmpOut,
       outputDir: tmpOut,
       isCancelled: () => {
         if (!cancelFlag) {

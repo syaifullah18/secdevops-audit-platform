@@ -10,7 +10,10 @@ import {
 import { type ConnectionOptions, type Job, Worker } from "bullmq";
 import { parseWorkerConfig, type WorkerConfig } from "./config.js";
 import type { ImportFindingsFn } from "./types.js";
+import fs from "node:fs/promises";
+import { EventSequencer } from "./events.js";
 import { AuditPipeline } from "./pipeline.js";
+import { prepareTarget, targetDirFor } from "./target.js";
 import type { SdapMetrics } from "./metrics.js";
 import { recordRunMetrics } from "./record.js";
 
@@ -73,12 +76,59 @@ export function createAuditWorker(options: AuditWorkerOptions): AuditWorkerInsta
       return latest?.status === "cancelled";
     };
 
-    const finished = await pipeline.execute(run, {
-      resume: runJob.resume,
-      isCancelled: isCancelledCombined,
-      targetDir: opts.targetDir,
-      outputDir: opts.outputDir,
-    });
+    // Without an explicit target (tests), audit a fresh checkout of the project's repository.
+    let targetDir = opts.targetDir;
+    let cleanup: (() => Promise<void>) | null = null;
+    if (!targetDir) {
+      const project = await options.store.projects.get(run.projectId, { clientIds: "*" });
+      if (!project) throw new Error(`Project not found: ${run.projectId}`);
+      const dir = targetDirFor(config.outputBaseDir, run.id);
+      try {
+        const { commitSha } = await prepareTarget({
+          repoUrl: project.repoUrl,
+          ref: run.ref || project.defaultBranch,
+          commitSha: run.commitSha,
+          dir,
+          token: process.env["GIT_AUTH_TOKEN"],
+          tokenHost: process.env["GIT_AUTH_HOST"],
+        });
+        run.commitSha = commitSha;
+        await options.store.runs.update(run.id, { commitSha });
+      } catch (err) {
+        await fs.rm(dir, { recursive: true, force: true });
+        const reason = `clone_failed: ${err instanceof Error ? err.message : String(err)}`;
+        const endedAt = new Date().toISOString();
+        await options.store.runs.update(run.id, {
+          status: "failed",
+          failureReason: reason,
+          endedAt,
+        });
+        await new EventSequencer({
+          runId: run.id,
+          projectId: run.projectId,
+          sink: { emit: (event) => options.store.events.append(event) },
+        }).emitRunFailed({ reason, phase: "preflight", willRetry: false });
+        const failed = (await options.store.runs.get(run.id, { clientIds: "*" })) ?? run;
+        if (options.metrics) {
+          await recordRunMetrics(options.metrics, options.store, failed).catch(() => undefined);
+        }
+        return failed;
+      }
+      targetDir = dir;
+      cleanup = () => fs.rm(dir, { recursive: true, force: true });
+    }
+
+    let finished: Run;
+    try {
+      finished = await pipeline.execute(run, {
+        resume: runJob.resume,
+        isCancelled: isCancelledCombined,
+        targetDir,
+        outputDir: opts.outputDir,
+      });
+    } finally {
+      await cleanup?.().catch(() => undefined);
+    }
     if (options.metrics) {
       // Metrics are informational: a failure here must never fail the run.
       await recordRunMetrics(options.metrics, options.store, finished).catch(() => undefined);

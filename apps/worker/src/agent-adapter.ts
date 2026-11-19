@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import {
   type AdapterKind,
@@ -167,16 +168,55 @@ export class AgentCliAdapter implements ModelAdapter {
     const outputDir =
       req.metadata.outputDir || this.defaultPolicy?.outputDir || path.resolve(process.cwd(), "out");
 
+    // Agents see the fixed mount points when isolated, and the real directories when not.
+    const isolated = this.sandboxRunner.enforcing;
+    const seenTarget = isolated ? "/target" : targetDir;
+    const seenOutput = isolated ? "/out" : outputDir;
+    const skillDir = req.metadata.skillDir;
+    const seenSkill = skillDir ? (isolated ? "/skill" : skillDir) : undefined;
+
+    const isClaudeCli = !this.argvPrefix && this.id.includes("claude");
     const argv: string[] = this.argvPrefix
       ? [...this.argvPrefix, "-p", prompt, "--model", req.model]
       : [this.command, "-p", prompt, "--model", req.model];
+    if (isClaudeCli) {
+      argv.push(
+        "--output-format",
+        "json",
+        // File tools only: no shell, no network, and edits are pre-approved because nobody is
+        // there to answer a prompt in a headless run.
+        "--allowedTools",
+        "Read,Grep,Glob,Write,Edit",
+        "--permission-mode",
+        "acceptEdits",
+        "--add-dir",
+        seenOutput,
+        ...(seenSkill ? ["--add-dir", seenSkill] : []),
+      );
+    }
+
+    const home = isolated ? "/tmp" : path.join(outputDir, ".agent-home");
+    if (isClaudeCli && !isolated) await mkdir(home, { recursive: true });
+    const passthrough: Record<string, string> = {};
+    if (isClaudeCli) {
+      for (const k of ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"]) {
+        const v = process.env[k];
+        if (v) passthrough[k] = v;
+      }
+      passthrough["HOME"] = home;
+      passthrough["DISABLE_TELEMETRY"] = "1";
+      passthrough["DISABLE_AUTOUPDATER"] = "1";
+      passthrough["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1";
+    }
 
     const policy: SandboxPolicy = {
-      egressAllowlist: this.defaultPolicy?.egressAllowlist ?? [],
+      egressAllowlist:
+        this.defaultPolicy?.egressAllowlist ?? (isClaudeCli ? ["api.anthropic.com"] : []),
       env: {
+        ...passthrough,
         ...(this.defaultPolicy?.env ?? {}),
-        SDAP_OUTPUT_DIR: outputDir,
-        SDAP_TARGET_DIR: targetDir,
+        SDAP_OUTPUT_DIR: seenOutput,
+        SDAP_TARGET_DIR: seenTarget,
         ...(req.metadata.env ? JSON.parse(req.metadata.env) : {}),
       },
       cpus: this.defaultPolicy?.cpus ?? 2,
@@ -184,12 +224,15 @@ export class AgentCliAdapter implements ModelAdapter {
       timeoutSec: this.defaultPolicy?.timeoutSec ?? 3600,
       targetDir,
       outputDir,
-      readOnlyMounts: this.defaultPolicy?.readOnlyMounts ?? [],
+      readOnlyMounts:
+        this.defaultPolicy?.readOnlyMounts ??
+        (isolated && skillDir ? [{ hostPath: skillDir, containerPath: "/skill" }] : []),
     };
 
     const execResult = await this.sandboxRunner.exec({
       argv,
-      cwd: targetDir,
+      // A path inside the sandbox: runners map /target to the real directory.
+      cwd: "/target",
       policy,
       signal: opts?.signal,
     });
@@ -221,16 +264,55 @@ export class AgentCliAdapter implements ModelAdapter {
       );
     }
 
-    const usage = parseUsage(execResult.stdout);
+    const parsed = isClaudeCli ? parseClaudeJson(execResult.stdout) : null;
+    if (parsed?.isError) {
+      throw new ModelAdapterError(
+        mapCliFailureToErrorCode(0, null, parsed.text, ""),
+        this.id,
+        parsed.text || "Agent reported an error",
+      );
+    }
+    const usage = parsed ? parsed.usage : parseUsage(execResult.stdout);
 
     return {
-      text: execResult.stdout,
+      text: parsed ? parsed.text : execResult.stdout,
       adapter: this.id,
       model: req.model,
       finishReason: "stop",
       usage,
     };
   }
+}
+
+interface ClaudeResult {
+  text: string;
+  isError: boolean;
+  usage: Usage;
+}
+
+/** Reads `claude -p --output-format json`: the answer plus the tokens and cost it really used. */
+export function parseClaudeJson(stdout: string): ClaudeResult | null {
+  let j: Record<string, unknown>;
+  try {
+    j = JSON.parse(stdout) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  if (typeof j !== "object" || j === null) return null;
+  const u = (j["usage"] ?? {}) as Record<string, unknown>;
+  const n = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return {
+    text: typeof j["result"] === "string" ? j["result"] : "",
+    isError: j["is_error"] === true,
+    usage: {
+      inputTokens:
+        n(u["input_tokens"]) +
+        n(u["cache_creation_input_tokens"]) +
+        n(u["cache_read_input_tokens"]),
+      outputTokens: n(u["output_tokens"]),
+      costUsd: n(j["total_cost_usd"]),
+    },
+  };
 }
 
 function parseUsage(stdout: string): Usage {

@@ -43,7 +43,9 @@ if (
   prompt.includes("SIMULATE_QUOTA") ||
   process.env.SDAP_SIMULATE_ERROR === "quota_exceeded"
 ) {
-  process.stderr.write(`Error: quota_exceeded: Insufficient credit balance or quota exceeded for model ${model}\n`);
+  process.stderr.write(
+    `Error: quota_exceeded: Insufficient credit balance or quota exceeded for model ${model}\n`,
+  );
   process.exit(1);
 }
 
@@ -53,7 +55,9 @@ if (
   prompt.includes("SIMULATE_RATE_LIMIT") ||
   process.env.SDAP_SIMULATE_ERROR === "rate_limited"
 ) {
-  process.stderr.write(`Error: 429 rate_limited: Rate limit reached for model ${model}. Please retry later.\n`);
+  process.stderr.write(
+    `Error: 429 rate_limited: Rate limit reached for model ${model}. Please retry later.\n`,
+  );
   process.exit(1);
 }
 
@@ -73,7 +77,9 @@ if (
   prompt.includes("SIMULATE_PERMISSION") ||
   process.env.SDAP_SIMULATE_ERROR === "permission_denied"
 ) {
-  process.stderr.write(`Error: permission_denied: EACCES permission denied to read or write file.\n`);
+  process.stderr.write(
+    `Error: permission_denied: EACCES permission denied to read or write file.\n`,
+  );
   process.exit(1);
 }
 
@@ -95,7 +101,8 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 // Check quarantine to see if we've already retried an invalid run
 const quarantineDir = path.join(outputDir, "quarantine");
-const hasQuarantinedFiles = fs.existsSync(quarantineDir) && fs.readdirSync(quarantineDir).length > 0;
+const hasQuarantinedFiles =
+  fs.existsSync(quarantineDir) && fs.readdirSync(quarantineDir).length > 0;
 
 // 6. Invalid output simulation
 if (
@@ -174,7 +181,10 @@ const canonicalRefs = {
 };
 
 function encodeCanonicalRef(value) {
-  return encodeURIComponent(String(value)).replace(/[!'()*~]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return encodeURIComponent(String(value)).replace(
+    /[!'()*~]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
 }
 
 const canonicalCoverageId = [
@@ -213,34 +223,38 @@ const validLedger = [
   },
 ];
 
-fs.writeFileSync(path.join(outputDir, "findings.json"), JSON.stringify(validFindings, null, 2), "utf8");
+fs.writeFileSync(
+  path.join(outputDir, "findings.json"),
+  JSON.stringify(validFindings, null, 2),
+  "utf8",
+);
 fs.writeFileSync(
   path.join(outputDir, "coverage-ledger.json"),
   JSON.stringify(validLedger, null, 2),
-  "utf8"
+  "utf8",
 );
 fs.writeFileSync(
   path.join(outputDir, "architecture.md"),
   "# Architecture\n\nTarget architecture review.\n",
-  "utf8"
+  "utf8",
 );
 fs.writeFileSync(
   path.join(outputDir, "REPORT.md"),
   "# Security Audit Report\n\n1 finding confirmed.\n",
-  "utf8"
+  "utf8",
 );
 fs.writeFileSync(
   path.join(outputDir, "FINDINGS-DETAIL.md"),
   "# Findings Detail\n\n- Missing authorization check\n",
-  "utf8"
+  "utf8",
 );
 fs.writeFileSync(
   path.join(outputDir, "NEEDS-VALIDATION.md"),
   "# Needs Validation\n\nNone.\n",
-  "utf8"
+  "utf8",
 );
 
 process.stdout.write(
-  `Fake agent completed successfully for model ${model}. Tokens: 120 input, 80 output.\n`
+  `Fake agent completed successfully for model ${model}. Tokens: 120 input, 80 output.\n`,
 );
 process.exit(0);

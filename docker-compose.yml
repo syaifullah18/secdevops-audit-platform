@@ -120,6 +120,9 @@ services:
       SDAP_METRICS_PORT: "9464"
       # `none` runs audits without a container sandbox (needed where no container socket exists).
       SDAP_SANDBOX_RUNNER: ${SDAP_SANDBOX_RUNNER:-}
+      # Private repositories: a token for GIT_AUTH_HOST (default github.com), sent to that host only.
+      GIT_AUTH_TOKEN: ${GIT_AUTH_TOKEN:-}
+      GIT_AUTH_HOST: ${GIT_AUTH_HOST:-}
       MODEL_DEFAULT_ADAPTER: ${MODEL_DEFAULT_ADAPTER:-mock}
       JEV_API_URL: ${JEV_API_URL:-}
       JEV_API_KEY: ${JEV_API_KEY:-}

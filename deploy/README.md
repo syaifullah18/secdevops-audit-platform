@@ -68,8 +68,10 @@ invitations and an audit log. It is off until you set `AUTH_NATIVE=true`.
    `https://your.domain/api/v1/auth/oauth/google/callback` (or `.../github/callback`), then set
    `GOOGLE_CLIENT_ID/SECRET` or `GITHUB_CLIENT_ID/SECRET`. With `PASSWORD_LOGIN=false` only
    providers remain.
-6. **Database.** The migration `apps/api/drizzle/0001_native_accounts.sql` runs automatically on a
-   fresh database. On an existing one, apply it once: `psql "$DATABASE_URL" -f apps/api/drizzle/0001_native_accounts.sql`.
+6. **Database.** The API applies any missing migration from `apps/api/drizzle` when it starts and
+   records them in `sdap_schema_migrations`, so upgrading an existing database needs no manual SQL.
+   A database created earlier by the init script is recognised and not re-created. Set
+   `AUTO_MIGRATE=false` to run migrations yourself (for example from a release job).
 
 Data: passwords are stored as scrypt hashes, session and API-token secrets only as SHA-256. Login is
 rate limited per address and locks an account for 15 minutes after five failures. A user can delete

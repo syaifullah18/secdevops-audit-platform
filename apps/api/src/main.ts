@@ -4,6 +4,7 @@ import { buildApp } from "./app.js";
 import { createAuthVerifier, hasExternalAuth } from "./auth.js";
 import { loadConfig } from "./config.js";
 import { createPgStore } from "./db/index.js";
+import { applyMigrations } from "./db/migrate.js";
 import { BullMqQueue } from "./queue.js";
 
 const start = async () => {
@@ -14,6 +15,15 @@ const start = async () => {
   }
 
   const pool = new pg.Pool({ connectionString: config.databaseUrl });
+  // Bring the schema up to date before serving. Set AUTO_MIGRATE=false to run migrations yourself.
+  if (process.env["AUTO_MIGRATE"] !== "false") {
+    const client = await pool.connect();
+    try {
+      await applyMigrations(client, undefined, (m) => console.warn(m));
+    } finally {
+      client.release();
+    }
+  }
   const store = createPgStore(pool);
   const queue = new BullMqQueue(config.redisUrl ?? "redis://localhost:6379");
   const accounts = config.accounts.enabled ? createAccounts(config, pool) : null;

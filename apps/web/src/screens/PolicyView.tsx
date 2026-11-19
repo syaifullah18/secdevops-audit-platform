@@ -20,8 +20,10 @@ import {
   cx,
   tableCls,
 } from "../components/stitch.js";
-import { FIXTURE_POLICY_1_ID } from "../api/fixtures.js";
 import { countdown } from "./ReleaseReadiness.js";
+
+/** The policy the API applies to a project that has none of its own. */
+const DEFAULT_POLICY_ID = "00000000-0000-4000-8000-000000000000";
 
 const SEVERITIES: readonly Severity[] = ["critical", "high", "medium", "low", "informational"];
 
@@ -37,11 +39,10 @@ export function PolicyViewScreen() {
     async function load() {
       try {
         setLoading(true);
-        const [pol, excs, projs] = await Promise.all([
-          api.getPolicy(FIXTURE_POLICY_1_ID),
-          api.getExceptions(),
-          api.getProjects(),
-        ]);
+        const [excs, projs] = await Promise.all([api.getExceptions(), api.getProjects()]);
+        // Show the policy the projects actually use; with none assigned, the built-in default.
+        const policyId = projs.find((p) => p.policyId)?.policyId ?? DEFAULT_POLICY_ID;
+        const pol = await api.getPolicy(policyId);
         if (mounted) {
           setPolicy(pol);
           setExceptions(excs);

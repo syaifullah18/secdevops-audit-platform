@@ -167,7 +167,9 @@ export const api = {
   },
 
   async getReviewQueue(): Promise<Finding[]> {
-    return request("/review-queue", { method: "GET" }, z.array(Finding));
+    // Same paginated shape as /findings; the queue is shown as one list.
+    const page = await request("/review-queue?limit=200", { method: "GET" }, FindingPage);
+    return page.items;
   },
 
   async getPolicy(id: string): Promise<Policy> {

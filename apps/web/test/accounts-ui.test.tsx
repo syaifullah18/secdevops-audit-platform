@@ -192,3 +192,20 @@ describe("accounts UI (mock API)", () => {
     expect(screen.queryByTestId("nav-admin")).toBeNull();
   });
 });
+
+describe("lists the real API returns", () => {
+  it("reads the review queue from the paginated shape the server sends", async () => {
+    const { api } = await import("../src/api/client.js");
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ items: [], total: 0, nextCursor: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })) as typeof fetch;
+    try {
+      expect(await api.getReviewQueue()).toEqual([]);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

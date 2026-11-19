@@ -767,10 +767,13 @@ export function installFetchShim(store: MockDataStore = mockStore): () => void {
       // GET /review-queue
       if (pathname === "/review-queue" && method === "GET") {
         const queue = store.getReviewQueue();
-        return new Response(JSON.stringify(queue), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ items: queue, total: queue.length, nextCursor: null }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // GET /policies/:id

@@ -16,11 +16,13 @@ import { requireRoles, scopeIncludes } from "../rbac.js";
 
 export const PolicyInput = Policy.omit({ id: true, createdAt: true, updatedAt: true });
 
+const DEFAULT_POLICY_ID = "00000000-0000-4000-8000-000000000000";
+
 /** Used when a project has no policy yet: block on confirmed high and above. */
 const defaultPolicy = (): Policy => {
   const now = new Date().toISOString();
   return {
-    id: "00000000-0000-4000-8000-000000000000",
+    id: DEFAULT_POLICY_ID,
     name: "Default policy",
     clientId: null,
     mode: "enforce",
@@ -88,7 +90,9 @@ export const policyRoutes: FastifyPluginAsync<{ store: Store }> = async (app, op
 
   app.get("/policies/:id", async (req) => {
     const id = parseId((req.params as { id: string }).id, "Policy");
-    const policy = await store.policies.get(id, req.scope);
+    const policy =
+      (await store.policies.get(id, req.scope)) ??
+      (id === DEFAULT_POLICY_ID ? defaultPolicy() : null);
     if (!policy) {
       throw new NotFoundError("Policy not found");
     }

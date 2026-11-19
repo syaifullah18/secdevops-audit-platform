@@ -31,6 +31,18 @@ describe("dashboard read routes", () => {
     expect(body.trend).toEqual([]);
   });
 
+  it("serves the built-in default policy when a project has none of its own", async () => {
+    const res = await get(c, "/policies/00000000-0000-4000-8000-000000000000");
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ name: "Default policy", mode: "enforce" });
+    expect((await get(c, "/policies/11111111-1111-4111-8111-111111111111")).statusCode).toBe(404);
+  });
+
+  it("returns the review queue as a page of findings", async () => {
+    const body = (await get(c, "/review-queue")).json();
+    expect(body).toMatchObject({ items: [], total: 0, nextCursor: null });
+  });
+
   it("counts open findings by severity and verdict", async () => {
     await c.store.findings.upsert(
       sampleFinding({ projectId: project.id, status: "new", verifiedSeverity: "high" }),

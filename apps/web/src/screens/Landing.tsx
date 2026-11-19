@@ -193,13 +193,23 @@ export function LandingScreen() {
         </div>
 
         <div className="mx-auto max-w-4xl px-4 pb-16">
-          <img
-            src="/demo.gif"
-            alt="Walkthrough of the dashboard, a finding triage with a proposed remediation, a project's findings, the release gate, and a compliance export"
-            width={1280}
-            height={718}
-            className="block h-auto w-full rounded-xl shadow-2xl shadow-black/40"
-          />
+          <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl shadow-black/40">
+            <div className="flex items-center gap-1.5 border-b border-outline-variant/60 bg-surface-container px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+              <span className="ml-3 truncate text-xs text-on-surface-variant">
+                secdevops.ipungsyaifullah.my.id
+              </span>
+            </div>
+            <img
+              src="/demo.gif"
+              alt="Walkthrough of the dashboard, release gate status, a compliance export, and the admin user list"
+              width={606}
+              height={595}
+              className="block h-auto w-full"
+            />
+          </div>
         </div>
 
         <Section

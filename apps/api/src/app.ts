@@ -107,6 +107,7 @@ export const buildApp = async (options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(systemRoutes, {
     store: options.store,
     metrics,
+    queue: options.queue,
     metricsBearerToken: options.metricsBearerToken,
   });
 

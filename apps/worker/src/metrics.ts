@@ -17,7 +17,7 @@ import {
  * never finding titles, file paths or code. Use `sanitizeLabelValue` for any free-form value
  * (model names, adapter names, failure reasons).
  *
- * The handles are not wired into jobs yet (Phase 2); only `metricsHandler` is ready to mount.
+ * Run, token, cost and slice counters are recorded per finished run by `recordRunMetrics` (record.ts).
  */
 
 export const METRIC_PREFIX = "sdap_";

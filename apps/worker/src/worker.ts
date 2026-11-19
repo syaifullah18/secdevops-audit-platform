@@ -11,6 +11,8 @@ import { type ConnectionOptions, type Job, Worker } from "bullmq";
 import { parseWorkerConfig, type WorkerConfig } from "./config.js";
 import type { ImportFindingsFn } from "./types.js";
 import { AuditPipeline } from "./pipeline.js";
+import type { SdapMetrics } from "./metrics.js";
+import { recordRunMetrics } from "./record.js";
 
 export interface AuditWorkerOptions {
   config?: WorkerConfig;
@@ -20,6 +22,8 @@ export interface AuditWorkerOptions {
   importFindings?: ImportFindingsFn;
   routes?: ModelRoute[];
   connection?: ConnectionOptions;
+  /** When set, every finished run is recorded here (served at the worker's /metrics). */
+  metrics?: SdapMetrics;
 }
 
 export interface AuditWorkerInstance {
@@ -69,12 +73,17 @@ export function createAuditWorker(options: AuditWorkerOptions): AuditWorkerInsta
       return latest?.status === "cancelled";
     };
 
-    return await pipeline.execute(run, {
+    const finished = await pipeline.execute(run, {
       resume: runJob.resume,
       isCancelled: isCancelledCombined,
       targetDir: opts.targetDir,
       outputDir: opts.outputDir,
     });
+    if (options.metrics) {
+      // Metrics are informational: a failure here must never fail the run.
+      await recordRunMetrics(options.metrics, options.store, finished).catch(() => undefined);
+    }
+    return finished;
   };
 
   let worker: Worker | null = null;

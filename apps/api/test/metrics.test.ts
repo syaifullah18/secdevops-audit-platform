@@ -120,3 +120,20 @@ describe("metricsHandler", () => {
     await app.close();
   });
 });
+
+describe("GET /metrics on the running app", () => {
+  it("reports live findings and queue depth, not just process metrics", async () => {
+    const { setupTestApp, sampleProject, sampleFinding } = await import("./helpers.js");
+    const ctx = await setupTestApp();
+    const project = sampleProject();
+    await ctx.store.projects.create(project);
+    await ctx.store.findings.upsert(sampleFinding({ projectId: project.id }));
+    await ctx.queue.enqueue({ runId: "run-1", projectId: project.id, resume: false });
+
+    const res = await ctx.app.inject({ method: "GET", url: "/metrics" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatch(new RegExp(`sdap_findings\\{[^}]*project="${project.id}"[^}]*\\} 1`));
+    expect(res.body).toMatch(/sdap_queue_depth\{[^}]*state="waiting"[^}]*\} 1/);
+    await ctx.app.close();
+  });
+});

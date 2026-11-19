@@ -17,7 +17,8 @@ import {
  * never finding titles, file paths or code. Use `sanitizeLabelValue` for any free-form value
  * (model names, adapter names, failure reasons).
  *
- * The handles are not wired into routes yet (Phase 2); only `metricsHandler` is ready to mount.
+ * The API fills `sdap_findings` and `sdap_queue_depth` at scrape time (see `routes/system.ts`);
+ * run, token and cost counters are recorded by the worker and served from its own /metrics.
  */
 
 export const METRIC_PREFIX = "sdap_";
@@ -126,6 +127,8 @@ export interface MetricsHandlerOptions {
    * endpoint is reachable from the monitoring network alone.
    */
   bearerToken?: string;
+  /** Runs before each scrape to refresh gauges. A failure is ignored; stale values are served. */
+  beforeScrape?: () => Promise<void>;
 }
 
 const tokenMatches = (header: string | undefined, expected: string): boolean => {
@@ -138,7 +141,7 @@ const tokenMatches = (header: string | undefined, expected: string): boolean => 
 
 /**
  * Fastify handler serving the Prometheus text exposition. Mount with
- * `app.get("/metrics", metricsHandler(metrics.registry, { bearerToken }))` in Phase 2.
+ * `app.get("/metrics", metricsHandler(metrics.registry, { bearerToken }))`.
  */
 export const metricsHandler =
   (registry: Registry, options: MetricsHandlerOptions = {}) =>
@@ -146,6 +149,7 @@ export const metricsHandler =
     if (options.bearerToken && !tokenMatches(req.headers.authorization, options.bearerToken)) {
       return reply.status(401).header("www-authenticate", "Bearer").send({ error: "unauthorized" });
     }
+    if (options.beforeScrape) await options.beforeScrape().catch(() => undefined);
     return reply
       .header("content-type", registry.contentType)
       .header("cache-control", "no-store")

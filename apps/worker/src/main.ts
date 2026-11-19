@@ -60,6 +60,7 @@ const start = async () => {
     store,
     sandboxRunner,
     adapterRegistry,
+    metrics,
     connection: {
       url: config.redisUrl,
     },

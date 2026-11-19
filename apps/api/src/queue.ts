@@ -4,6 +4,8 @@ import { Queue as BullQueue, type QueueOptions } from "bullmq";
 export interface Queue {
   enqueue(job: RunJob): Promise<void>;
   cancel(runId: string): Promise<void>;
+  /** Jobs per state, for the queue-depth gauge. */
+  counts?(): Promise<Record<string, number>>;
   close?(): Promise<void>;
 }
 
@@ -17,6 +19,10 @@ export class MemoryQueue implements Queue {
 
   async cancel(runId: string): Promise<void> {
     this.cancelledRunIds.add(runId);
+  }
+
+  async counts(): Promise<Record<string, number>> {
+    return { waiting: this.jobs.length };
   }
 
   async close(): Promise<void> {}
@@ -60,6 +66,10 @@ export class BullMqQueue implements Queue {
       // An active job is locked by its worker and cannot be removed. The API marks the run
       // `cancelled` and the worker stops when it next sees that status.
     }
+  }
+
+  async counts(): Promise<Record<string, number>> {
+    return this.bullQueue.getJobCounts("waiting", "active", "delayed", "failed", "completed");
   }
 
   async close(): Promise<void> {

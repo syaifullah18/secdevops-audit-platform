@@ -40,6 +40,24 @@ const STEPS = [
   ["Triage and gate", "Review what needs validation, grant waivers, and check release readiness."],
 ] as const;
 
+const SELF_HOST_POINTS = [
+  {
+    icon: "database",
+    title: "One database holds everything",
+    body: "A single PostgreSQL instance stores every finding, account and audit log. Back it up, and you have the whole platform.",
+  },
+  {
+    icon: "cloud_off",
+    title: "No third-party requests",
+    body: "Fonts, icons and scripts are bundled in the app. Nothing loads from a CDN, and audit runs call only the model provider you configure.",
+  },
+  {
+    icon: "balance",
+    title: "Apache-2.0 licensed",
+    body: "Self-host it forever, for free. No seat count, no feature held back.",
+  },
+] as const;
+
 const FAQ = [
   [
     "Where does my data live?",
@@ -249,21 +267,54 @@ export function LandingScreen() {
         <Section
           id="self-host"
           title="Self-host in a few minutes"
-          lead="You run it, so the findings, accounts and history are yours."
         >
-          <pre className="overflow-x-auto rounded-lg border border-outline-variant/60 bg-zinc-950 p-4 text-sm text-zinc-100">
-            {`git clone ${REPO}.git
-cd secdevops-audit-platform
-cp .env.example .env
-docker compose up --build -d`}
-          </pre>
-          <ul className="mt-4 list-disc pl-5 text-sm text-on-surface-variant">
-            <li>One PostgreSQL database holds everything.</li>
-            <li>No third-party scripts or fonts are loaded in the app.</li>
-            <li>
-              Prometheus metrics and JSON logs are there when you want them; Grafana is optional.
-            </li>
-          </ul>
+          <div className="grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <p className="max-w-md text-on-surface-variant">
+                You run it, so the findings, accounts and history are yours.
+              </p>
+              <div className="mt-6 flex flex-col gap-5">
+                {SELF_HOST_POINTS.map((p) => (
+                  <div key={p.title} className="flex gap-3.5">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-on-surface text-surface-container-lowest">
+                      <Icon name={p.icon} className="text-xl" />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold">{p.title}</h3>
+                      <p className="mt-0.5 text-sm text-on-surface-variant">{p.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-zinc-950 shadow-2xl shadow-black/40">
+              <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                <span className="ml-2 font-mono text-xs text-zinc-400">
+                  self-host in a few minutes
+                </span>
+              </div>
+              <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed break-all whitespace-pre-wrap text-zinc-100">
+                <span className="text-zinc-500"># clone, build, run</span>
+                {"\n"}
+                <span className="text-emerald-400">$</span> git clone {REPO}
+                {".git"}
+                {"\n"}
+                <span className="text-emerald-400">$</span> cd secdevops-audit-platform{"\n"}
+                <span className="text-emerald-400">$</span> cp .env.example .env{"\n"}
+                <span className="text-emerald-400">$</span> docker compose up --build -d{"\n"}
+                {"\n"}
+                <span className="text-zinc-500"> * App on http://localhost:3000</span>
+                {"\n"}
+                <span className="text-zinc-500">
+                  {" "}
+                  * One Postgres container; Prometheus and Grafana are optional
+                </span>
+              </pre>
+            </div>
+          </div>
         </Section>
 
         <Section id="faq" title="Questions">

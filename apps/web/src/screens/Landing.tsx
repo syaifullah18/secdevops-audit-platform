@@ -204,9 +204,9 @@ export function LandingScreen() {
             </div>
             <img
               src="/demo.gif"
-              alt="Walkthrough of the dashboard, release gate status, a compliance export, and the admin user list"
-              width={606}
-              height={595}
+              alt="Walkthrough of the dashboard, a review queue finding, the release gate, a compliance export, and the admin user list"
+              width={1513}
+              height={661}
               className="block h-auto w-full"
             />
           </div>
